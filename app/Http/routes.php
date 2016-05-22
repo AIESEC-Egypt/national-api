@@ -14,3 +14,7 @@
 $app->get('/', function () use ($app) {
     return $app->version();
 });
+
+$app->get('/api/', ['middleware' => 'auth', function () use ($app) {
+    return $app->version();
+}]);

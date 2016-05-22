@@ -2,9 +2,11 @@
 
 namespace App\Providers;
 
-use App\User;
+use App\Person;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\Cache;
+use Carbon\Carbon;
 
 class AuthServiceProvider extends ServiceProvider
 {
@@ -25,14 +27,22 @@ class AuthServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        // Here you may define how you wish users to be authenticated for your Lumen
-        // application. The callback which receives the incoming request instance
-        // should return either a User instance or null. You're free to obtain
-        // the User instance via an API token or any other method necessary.
-
         $this->app['auth']->viaRequest('api', function ($request) {
-            if ($request->input('api_token')) {
-                return User::where('api_token', $request->input('api_token'))->first();
+            if ($request->input('access_token')) {
+                $id = Cache::get('access_token:' . $request->input('access_token'));
+                if($id !== null) {
+                    return Person::find($id);
+                } else {
+                    $person = json_decode(file_get_contents(env('CURRENT_PERSON_URL') . '?access_token=' . $request->input('access_token')));
+                    if($person != null) {
+                        Cache::put('access_token:' . $request->input('access_token'), intval($person->person->id), Carbon::parse($person->expires_at));
+                        return Person::find(intval($person->person->id));
+                    } else {
+                        return null;
+                    }
+                }
+            } else {
+                return null;
             }
         });
     }
