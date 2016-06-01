@@ -68,6 +68,17 @@ class TaskPolicy {
     }
 
     /**
+     * Determine if a person can update the due date of a task
+     *
+     * @param Person $person
+     * @param Task $task
+     * @return bool
+     */
+    public function update_due(Person $person, Task $task) {
+        return !$task->approved && is_null($task->deleted_at) && $task->person_id === $person->_internal_id && !$task->done;
+    }
+
+    /**
      * Determine if a person can approve a task
      *
      * @param Person $person

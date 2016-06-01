@@ -29,7 +29,7 @@ class PersonPolicy {
      * @return bool
      */
     public function listTasks(Person $user, Person $person) {
-        return $user->id === $person->id;
+        return $user->_internal_id === $person->_internal_id;
     }
 
     /**
@@ -39,7 +39,7 @@ class PersonPolicy {
      * @param Person $person
      * @return bool
      */
-    public function addTasks(Person $user, Person $person) {
-        return $user->id === $person->id;
+    public function addTask(Person $user, Person $person) {
+        return $user->_internal_id === $person->_internal_id;
     }
 }

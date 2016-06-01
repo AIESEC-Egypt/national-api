@@ -6,6 +6,7 @@ use App\Person;
 use App\Task;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class PersonController extends Controller
 {
@@ -15,6 +16,7 @@ class PersonController extends Controller
     public function __construct()
     {
         $this->middleware('auth');
+        $this->middleware('cors');
     }
 
     /**
@@ -92,6 +94,11 @@ class PersonController extends Controller
             $task->priority = $request->input('priority');
         } else {
             $task->priority = $person->tasks()->where('done', false)->max('priority') + 1;
+        }
+
+        // check if due date is set
+        if($request->has('due')) {
+            $task->due = Carbon::parse($request->input('due'));
         }
 
         // save Task

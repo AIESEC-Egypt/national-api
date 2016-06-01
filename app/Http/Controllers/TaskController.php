@@ -19,6 +19,7 @@ class TaskController extends Controller
     public function __construct()
     {
         $this->middleware('auth');
+        $this->middleware('cors');
     }
 
     /**
@@ -110,6 +111,15 @@ class TaskController extends Controller
 
             // update estimated
             $task->estimated = $request->input('estimated');
+        }
+
+        // if update for 'due' is requested
+        if($request->has('due')) {
+            // check special permissions
+            $this->authorize('update_due', $task);
+
+            // update due
+            $task->due = $request->input('due');
         }
 
         // save and return

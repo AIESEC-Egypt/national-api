@@ -34,6 +34,13 @@ class Task extends Model
      */
     protected $hidden = ['deleted_at', 'person_id'];
 
+    /**
+     * date attributes
+     *
+     * @var array
+     */
+    protected $dates = ['done_at', 'approved_at', 'due'];
+
     public function person() {
         return $this->belongsTo('App\Person');
     }

@@ -4,8 +4,8 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "6d547d9f47cd5b989e38de17c7eecd68",
-    "content-hash": "fa23919faebc3f9defdb5b07ee5b2a22",
+    "hash": "7ed85461549a155c5fe2a087729f7864",
+    "content-hash": "9a9ffd9bee830c06c452d820431e305b",
     "packages": [
         {
             "name": "doctrine/inflector",
@@ -2337,6 +2337,62 @@
                 "environment"
             ],
             "time": "2016-04-15 10:48:49"
+        },
+        {
+            "name": "vluzrmos/lumen-cors",
+            "version": "v2.1.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/vluzrmos/lumen-cors.git",
+                "reference": "f6a3bec80fa433c8bfc27fb3b9dfdf96c8bccc83"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/vluzrmos/lumen-cors/zipball/f6a3bec80fa433c8bfc27fb3b9dfdf96c8bccc83",
+                "reference": "f6a3bec80fa433c8bfc27fb3b9dfdf96c8bccc83",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/http": "~5.0",
+                "illuminate/support": "~5.0",
+                "php": ">=5.5.9"
+            },
+            "require-dev": {
+                "fabpot/php-cs-fixer": "~2.0",
+                "laravel/lumen": "~5.0",
+                "phpunit/phpunit": "~4.0"
+            },
+            "type": "package",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "2.1-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Vluzrmos\\LumenCors\\": "src/"
+                },
+                "files": [
+                    "src/helpers.php"
+                ]
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Vagner do Carmo",
+                    "email": "vluzrmos@gmail.com"
+                }
+            ],
+            "description": "A Simple Lumen CORS.",
+            "keywords": [
+                "cors",
+                "laravel",
+                "lumen"
+            ],
+            "time": "2015-07-10 02:37:59"
         }
     ],
     "packages-dev": [
