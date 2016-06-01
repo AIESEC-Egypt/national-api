@@ -15,7 +15,7 @@ class Persons extends Migration
         Schema::create('persons', function(Blueprint $table)
         {
             $table->increments('_internal_id');
-            $table->integer('id')->unique();
+            $table->integer('id')->unique()->unsigned()->nullable();
             $table->string('email')->unique();
             $table->string('first_name');
             $table->string('middle_name')->nullable()->default(null);

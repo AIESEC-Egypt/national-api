@@ -3,48 +3,46 @@
 namespace App;
 
 use Illuminate\Auth\Authenticatable;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Laravel\Lumen\Auth\Authorizable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 use Illuminate\Contracts\Auth\Access\Authorizable as AuthorizableContract;
 
-class Person extends Model implements AuthenticatableContract, AuthorizableContract
+class Task extends Model
 {
-    use Authenticatable, Authorizable;
+    use SoftDeletes;
 
     /**
      * The database table used by the model.
      *
      * @var string
      */
-    protected $table = 'persons';
+    protected $table = 'tasks';
     
     /**
      * The attributes that are mass assignable.
      *
      * @var array
      */
-    protected $fillable = [];
+    protected $fillable = ['name', 'priority', 'estimated', 'needed'];
 
     /**
      * The attributes excluded from the model's JSON form.
      *
      * @var array
      */
-    protected $hidden = ['_internal_id'];
+    protected $hidden = ['deleted_at', 'person_id'];
 
-    /**
-     * Set the primary key to _internal_id, because this one is used for relationships
-     *
-     * @var string
-     */
-    protected $primaryKey = '_internal_id';
-
-    public function tasks() {
-        return $this->hasMany('App\Task');
+    public function person() {
+        return $this->belongsTo('App\Person');
     }
 
-    public function added_tasks() {
-        return $this->hasMany('App\Task', 'added_by');
+    public function added_by() {
+        return $this->belongsTo('App\Person', 'added_by');
+    }
+
+    public function approved_by() {
+        return $this->belongsTo('App\Person', 'approved_by');
     }
 }

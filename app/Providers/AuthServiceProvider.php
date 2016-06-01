@@ -3,6 +3,9 @@
 namespace App\Providers;
 
 use App\Person;
+use App\Policies\PersonPolicy;
+use App\Task;
+use App\Policies\TaskPolicy;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Cache;
@@ -27,23 +30,63 @@ class AuthServiceProvider extends ServiceProvider
      */
     public function boot()
     {
+        // register oAuth middleware
         $this->app['auth']->viaRequest('api', function ($request) {
+            // check if we got an access token
             if ($request->input('access_token')) {
-                $id = Cache::get('access_token:' . $request->input('access_token'));
-                if($id !== null) {
-                    return Person::find($id);
-                } else {
-                    $person = json_decode(file_get_contents(env('CURRENT_PERSON_URL') . '?access_token=' . $request->input('access_token')));
-                    if($person != null) {
-                        Cache::put('access_token:' . $request->input('access_token'), intval($person->person->id), Carbon::parse($person->expires_at));
-                        return Person::find(intval($person->person->id));
+                
+                // try to get the user id from cache
+                $pid = Cache::get('access_token:' . $request->input('access_token'));
+
+                // try to get the person
+                $p = null;
+                if($pid !== null) {
+                    $p = Person::where('id', $pid)->first();
+                }
+
+                // if we don't have an id or an person
+                if($pid === null || $p === null) {
+                    // retrieve current person from OAuth Service
+                    if (strpos(env('CURRENT_PERSON_URL'), '?') > 0) {
+                        $person = json_decode(@file_get_contents(env('CURRENT_PERSON_URL') . '&access_token=' . $request->input('access_token')));
                     } else {
-                        return null;
+                        $person = json_decode(@file_get_contents(env('CURRENT_PERSON_URL') . '?access_token=' . $request->input('access_token')));
+                    }
+
+                    // if we didn't got it return null
+                    if ($person === null) return null;
+
+                    // if we didn't got the id from cache and try to get the person
+                    if($pid === null) {
+                        // put the id in the cache as long as token is valid
+                        Cache::put('access_token:' . $request->input('access_token'), intval($person->person->id), Carbon::parse($person->expires_at));
+
+                        // try to get the person
+                        $p = Person::where('id', intval($person->person->id))->first();
+                    }
+
+                    // create person if it does not exists
+                    if(is_null($p)) {
+                        $p = new Person();
+                        $p->id = intval($person->person->id);
+                        $p->email = $person->person->email;
+                        $p->first_name = $person->person->first_name;
+                        $p->middle_name = ((isset($person->person->middle_name)) ? $person->person->middle_name : null);
+                        $p->last_name = $person->person->last_name;
+                        $p->dob =$person->person->dob ;
+                        $p->interviewed = $person->person->interviewed;
+                        $p->profile_picture_url = ((isset($person->person->profile_photo_url)) ? $person->person->profile_photo_url : null);
+                        $p->save();
                     }
                 }
+                return $p;
             } else {
                 return null;
             }
         });
+
+        // defining Gates
+        Gate::policy(Task::class, TaskPolicy::class);
+        Gate::policy(Person::class, PersonPolicy::class);
     }
 }
