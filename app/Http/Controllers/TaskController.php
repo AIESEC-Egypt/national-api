@@ -60,8 +60,12 @@ class TaskController extends Controller
         // check if needed time is set (optional parameter)
         if($request->has('needed')) $task->needed = $request->input('needed');
 
-        // save and return task
-        return ['task' => $task->save()];
+        // save and return
+        if($task->save()) {
+            return ['task' => $task];
+        } else {
+            abort(500, "Could not save task");
+        }
     }
 
     /**
@@ -122,7 +126,11 @@ class TaskController extends Controller
         }
 
         // save and return
-        return ['task' => $task->save()];
+        if($task->save()) {
+            return ['task' => $task];
+        } else {
+            abort(500, "Could not save task");
+        }
     }
 
     /**
@@ -145,6 +153,10 @@ class TaskController extends Controller
         $task->approved = true;
 
         // save and return
-        return ['task' => $task->save()];
+        if($task->save()) {
+            return ['task' => $task];
+        } else {
+            abort(500, "Could not save task");
+        }
     }
 }
