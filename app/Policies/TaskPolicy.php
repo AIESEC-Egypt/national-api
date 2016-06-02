@@ -31,7 +31,7 @@ class TaskPolicy {
      * @return bool
      */
     public function done(Person $person, Task $task) {
-        return !$task->approved && is_null($task->deleted_at) && $task->person_id === $person->_internal_id;
+        return !$task->approved && !$task->done && is_null($task->deleted_at) && $task->person_id === $person->_internal_id;
     }
 
     /**
