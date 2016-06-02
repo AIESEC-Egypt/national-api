@@ -58,10 +58,13 @@ $app->singleton(
 | route or middleware that'll be assigned to some specific routes.
 |
 */
-$app->routeMiddleware(array(
+$app->routeMiddleware([
     'auth' => App\Http\Middleware\Authenticate::class,
-    'cors' => 'Vluzrmos\LumenCors\CorsMiddleware'
-));
+]);
+
+$app->middleware([
+    Vluzrmos\LumenCors\CorsMiddleware::class
+]);
 
 /*
 |--------------------------------------------------------------------------
