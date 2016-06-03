@@ -85,7 +85,7 @@ class TaskController extends Controller
         if(Task::destroy($taskId)) {
             return ['status' => ['code' => 204, 'message' => 'success']];
         } else {
-            return ['status' => ['code' => 500, 'message' => 'failure']];
+            abort(500, "Database error");
         }
     }
 
@@ -158,5 +158,32 @@ class TaskController extends Controller
         } else {
             abort(500, "Could not save task");
         }
+    }
+
+    /**
+     * set the priorities of tasks equal to how their ids are ordered in the givven array
+     *
+     * @param Request $request
+     * @return array
+     */
+    public function prioritize(Request $request) {
+        if(!$request->has('ids')) abort(400, "argument 'ids' missing");
+
+        $ids = $request->input('ids', []);
+
+        $prio = 0;
+        foreach($ids as $id) {
+            $task = Task::findOrFail($id);
+
+            $this->authorize($task);
+
+            $task->priority = $prio;
+
+            if(!$task->save()) abort(500, "Could not save a task");
+
+            $prio++;
+        }
+
+        return ['status' => ['code' => 200, 'message' => 'success']];
     }
 }

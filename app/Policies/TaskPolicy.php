@@ -88,4 +88,15 @@ class TaskPolicy {
     public function approve(Person $person, Task $task) {
         return false;
     }
+
+    /**
+     * Determine if a person is allowed to prioritize a task
+     *
+     * @param Person $person
+     * @param Task $task
+     * @return bool
+     */
+    public function prioritize(Person $person, Task $task) {
+        return $task->person_id === $person->_internal_id;
+    }
 }

@@ -36,6 +36,10 @@ $app->delete('v1/tasks/{task_id}.json', ['as' => 'update_task', 'uses' => 'TaskC
 // DELETE /v1/tasks/{task_id}.json
 $app->delete('v1/tasks/{task_id}.json', ['as' => 'delete_task', 'uses' => 'TaskController@delete']);
 
+// PUT /v1/tasks/prioritize.json
+$app->post('v1/tasks/prioritize.json', ['as' => 'prioritize_tasks', 'uses' => 'TaskController@prioritize']);
+
+
 $app->group(['prefix' => 'v1/tasks/{task_id}', 'namespace' => 'App\Http\Controllers'], function () use ($app) {
     // POST /v1/tasks/{task_id}/done.json
     $app->post('done.json', ['as' => 'mark_task_done', 'uses' => 'TaskController@done']);
