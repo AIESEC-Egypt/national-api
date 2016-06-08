@@ -13,7 +13,11 @@ class Kernel extends ConsoleKernel
      * @var array
      */
     protected $commands = [
-        'App\Console\Commands\PullPersons'
+        'App\Console\Commands\PullPersons',
+        'App\Console\Commands\PullEntities',
+        'App\Console\Commands\PullProgrammes',
+        'App\Console\Commands\PullPositions',
+        'App\Console\Commands\Test'
     ];
 
     /**

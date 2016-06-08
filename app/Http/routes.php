@@ -22,6 +22,9 @@ $app->group(['prefix' => 'v1/persons/{person_id}', 'namespace' => 'App\Http\Cont
 
     // POST /v1/persons/{person_id}/tasks.json
     $app->post('tasks.json', ['as' => 'person_add_task', 'uses' => 'PersonController@addTask']);
+    
+    // GET /v1/persons/{person_id}/subPositions.json
+    $app->get('subPositions.json', ['as' => 'person_sub_positions', 'uses' => 'PersonController@subPositions']);
 });
 
 /**

@@ -9,9 +9,8 @@
         "laravel/lumen-framework": "5.2.*",
         "vlucas/phpdotenv": "~2.2",
         "predis/predis": "~1.0",
-
         "illuminate/redis": "5.2.*",
-        "kjschubert/php-gis-wrapper": "^0.2.0",
+        "kjschubert/php-gis-wrapper": "0.2.*",
         "vluzrmos/lumen-cors": "2.1.*"
     },
     "require-dev": {

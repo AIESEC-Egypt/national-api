@@ -106,4 +106,30 @@ class PersonController extends Controller
         // return all tasks of the person
         return ['tasks' => $person->tasks()->where('done', false)->orderBy('priority')->get()];
     }
+
+    /**
+     * returns the positions lead by the specified person
+     *
+     * @param Request $request
+     * @param $personId
+     * @return array
+     */
+    public function subPositions(Request $request, $personId) {
+        $person = $this->getPerson($personId);
+
+        $positions = $person->positionsLeader();
+
+        if($request->has('current') && intval($request->input('current')) === 1) {
+            $positions = $positions->where('positions.start_date', '<=', Carbon::now())->where('positions.end_date', '>=', Carbon::now());
+        }
+
+        $return = [];
+        foreach($positions->get() as $position) {
+            foreach($position->childs()->with('person', 'team')->get() as $child) {
+                $return[] = $child;
+            }
+        }
+
+        return ['positions' => $return];
+    }
 }
