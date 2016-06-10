@@ -67,7 +67,7 @@ class PersonController extends Controller
         $this->authorize($person);
 
         // get and return tasks
-        return ['tasks' => $person->tasks()->with('added_by', 'approved_by')->where('done', false)->orderBy('priority')->get()];
+        return ['tasks' => $person->tasks()->with('added_by')->where('done', false)->where('approved', false)->orderBy('priority')->get()];
     }
 
     
@@ -104,32 +104,25 @@ class PersonController extends Controller
         $person->tasks()->save($task);
 
         // return all tasks of the person
-        return ['tasks' => $person->tasks()->where('done', false)->orderBy('priority')->get()];
+        return ['tasks' => $person->tasks()->with('added_by')->where('done', false)->where('approved', false)->orderBy('priority')->get()];
     }
 
     /**
      * returns the positions lead by the specified person
+     * @GETparam current
      *
      * @param Request $request
      * @param $personId
      * @return array
      */
     public function subPositions(Request $request, $personId) {
+        // get person from database
         $person = $this->getPerson($personId);
 
-        $positions = $person->positionsLeader();
+        // check permissions
+        $this->authorize($person);
 
-        if($request->has('current') && intval($request->input('current')) === 1) {
-            $positions = $positions->where('positions.start_date', '<=', Carbon::now())->where('positions.end_date', '>=', Carbon::now());
-        }
 
-        $return = [];
-        foreach($positions->get() as $position) {
-            foreach($position->childs()->with('person', 'team')->get() as $child) {
-                $return[] = $child;
-            }
-        }
-
-        return ['positions' => $return];
+        return ['positions' => $person->membersAsPositions($request->input('current', false))->with('person', 'team')->get()];
     }
 }

@@ -35,7 +35,7 @@ class Position extends Model
      *
      * @var array
      */
-    protected $hidden = ['deleted_at', 'person_id', 'parent_id', 'team_id'];
+    protected $hidden = ['_internal_id', 'deleted_at', 'person_id', 'parent_id', 'team_id'];
 
     /**
      * date attributes

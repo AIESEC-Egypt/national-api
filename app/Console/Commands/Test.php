@@ -38,7 +38,7 @@ class Test extends Command
     {
         $person = Person::find(43133);
         DB::connection()->enableQueryLog();
-        echo "positions";
+/*        echo "positions";
         print_r($person->positions->toArray());
         echo "postionsMember";
         print_r($person->positionsMember->toArray());
@@ -47,7 +47,8 @@ class Test extends Command
         echo "positionsTeamLeader";
         print_r($person->positionsTeamLeader->toArray());
         echo "positionsLeaderNonEB";
-        print_r($person->positionsLeaderNonEB->toArray());
+        print_r($person->positionsLeaderNonEB->toArray());*/
+        print_r($person->membersAsPositions()->get());
         print_r(DB::getQueryLog());
     }
 }

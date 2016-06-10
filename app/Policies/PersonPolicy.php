@@ -29,7 +29,20 @@ class PersonPolicy {
      * @return bool
      */
     public function listTasks(Person $user, Person $person) {
-        return $user->_internal_id === $person->_internal_id;
+        if($user->_internal_id === $person->_internal_id) {
+            return true;
+        } else {
+            // check if it is a team leader of the person
+            foreach($person->leadersAsPersons(true)->get() as $leader) {
+                if($user->_internal_id === $leader->_internal_id) return true;
+            }
+            // check if it is a manager of the person
+            foreach($person->managers as $manager) {
+                if($user->_internal_id === $manager->_internal_id) return true;
+            }
+            // return false if both is not the case
+            return false;
+        }
     }
 
     /**
@@ -40,6 +53,30 @@ class PersonPolicy {
      * @return bool
      */
     public function addTask(Person $user, Person $person) {
+        if($user->_internal_id === $person->_internal_id) {
+            return true;
+        } else {
+            // check if it is a team leader of the person
+            foreach($person->leadersAsPersons(true)->get() as $leader) {
+                if($user->_internal_id === $leader->_internal_id) return true;
+            }
+            // check if it is a manager of the person
+            foreach($person->managers as $manager) {
+                if($user->_internal_id === $manager->_internal_id) return true;
+            }
+            // return false if both is not the case
+            return false;
+        }
+    }
+
+    /**
+     * Determines if $user is allowed to retrieve the sub positions of $person
+     *
+     * @param Person $user
+     * @param Person $person
+     * @return bool
+     */
+    public function subPositions(Person $user, Person $person) {
         return $user->_internal_id === $person->_internal_id;
     }
 }

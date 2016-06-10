@@ -8,17 +8,112 @@
 
 namespace App\Http\Controllers;
 
-use Gate;
+use App\Team;
 use App\Task;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class TaskController extends Controller
 {
     public function __construct()
     {
         $this->middleware('auth');
+    }
+
+    /**
+     * @param Request $request
+     */
+    public function all(Request $request) {
+        // get the current user
+        $person = Auth::user();
+
+        // start building a query to retrieve the person ids, by starting with all members of the current user
+        $persons = $person->membersAsPersons(true);
+
+        // apply the teams filter
+        if($request->has('teams')) {
+            if(!is_array($request->input('teams')) || count($request->input('teams')) < 1) {
+                $persons = null;
+            } else {
+                $teamIds = [];
+
+                // iterate through teams filter to get the internal ids
+                foreach($request->input('teams') as $teamId) {
+                    if(substr($teamId, 0, 1) == '_') {
+                        $teamId = substr($teamId, 1);
+                    } else {
+                        $teamId = Team::where('id', $teamId)->firstOrFail()->_internal_id;
+                    }
+                    $teamIds[] = $teamId;
+                }
+
+                // insert teams filter into persons query
+                $persons = $persons->whereIn('childs.team_id', $teamIds);
+            }
+        }
+
+        // apply the persons filter
+        if($request->has('persons') && !is_null($persons)) {
+            if(!is_array($request->input('persons')) || count($request->input('persons')) < 1) {
+                $persons = null;
+            } else {
+                $personIds = [];
+                $inPersonsFilter = false;   // we need to know for the skip_own_tasks filter if the current person is in the persons filter array
+
+                // iterate through persons filter to get internal ids
+                foreach ($request->input('persons') as $personId) {
+                    if (substr($personId, 0, 1) == '_') {
+                        $personId = substr($personId, 1);
+                    } else {
+                        $personId = Team::where('id', $personId)->firstOrFail()->_internal_id;
+                    }
+                    $personIds[] = $personId;
+
+                    // also check if the current user is in the array, because we maybe need that later
+                    if($personId == $person->_internal_id) $inPersonsFilter = true;
+                }
+
+                // insert persons filter into persons query
+                $persons = $persons->whereIn('members._internal_id', '=', $personIds);
+            }
+        }
+
+        // finish preparation of persons query
+        if(is_null($persons)) {
+            $persons = DB::raw('SELECT 0');
+        } else {
+            $persons = $persons->select('members._internal_id');
+        }
+
+        // create the tasks query and inject the persons query in the where clause
+        $tasks = Task::whereIn('person_id', function($query) use ($persons) {
+            $query->select(DB::raw(substr($persons->toSql(), 7)))->mergeBindings($persons->getQuery()->getQuery());
+        });
+
+        // if skip_own_tasks is not set, check if we also have to retrieve tasks of the current user.
+        // Attention: this has to come directly after the persons query injection to make the orWhere work!
+        if(!$request->has('skip_own_tasks') || !$request->input('skip_own_tasks')) {
+            // teams filter is not relevant, because we only select teams the person is in
+            // still check if the persons filter is not set or includes the current user
+            if(!$request->has('persons') || $inPersonsFilter) {
+                $tasks->orWhere('person_id', '=', $person->_internal_id);
+            }
+        }
+
+        // done filter
+        if($request->has('done')) {
+            $tasks = $tasks->where('done', '=', $request->input('done'));
+        }
+
+        // approved filter
+        if($request->has('approved')) {
+            $tasks = $tasks->where('approved', '=', $request->input('approved'));
+        }
+
+        // return results
+        return $tasks->with('person', 'added_by', 'approved_by')->paginate();
     }
 
     /**

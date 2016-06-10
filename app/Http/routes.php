@@ -30,6 +30,9 @@ $app->group(['prefix' => 'v1/persons/{person_id}', 'namespace' => 'App\Http\Cont
 /**
  * Tasks routes (v1)
  */
+// GET /v1/tasks.json
+$app->get('v1/tasks.json', ['as' => 'list_tasks', 'uses' => 'TaskController@all']);
+
 // GET /v1/tasks/{task_id}.json
 $app->get('v1/tasks/{task_id}.json', ['as' => 'get_task', 'uses' => 'TaskController@view']);
 
