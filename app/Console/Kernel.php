@@ -14,9 +14,11 @@ class Kernel extends ConsoleKernel
      */
     protected $commands = [
         'App\Console\Commands\PullPersons',
+        'App\Console\Commands\PullPersonsData',
         'App\Console\Commands\PullEntities',
         'App\Console\Commands\PullProgrammes',
         'App\Console\Commands\PullPositions',
+        'App\Console\Commands\KPIsTasks',
         'App\Console\Commands\Test'
     ];
 
@@ -28,6 +30,6 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        $schedule->command('sync:pull:persons')->everyMinute()->withoutOverlapping();
+        $schedule->command('kpis:tasks')->sundays()->daily();
     }
 }

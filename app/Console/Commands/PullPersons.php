@@ -22,7 +22,7 @@ class PullPersons extends Command
      *
      * @var string
      */
-    protected $description = 'Pull Sync Persons from the GIS (only those who are visible to the GIS user)';
+    protected $description = 'Pull new persons from the GIS (only those who are visible to the GIS user)';
 
     /**
      * Create a new command instance.
@@ -37,77 +37,35 @@ class PullPersons extends Command
     /**
      * Execute the console command.
      *
+     * @param int $perPage
+     * @param string|null $registeredFrom
      * @return mixed
      */
-    public function handle()
+    public function handle($perPage = 200, $registeredFrom = null)
     {
         // get a GIS Wrapper instance
         $gis = App::make('GIS')->getInstance();
         
         // increase number of people per page
-        $gis->people->setPerPage(200);
+        $gis->people->setPerPage($perPage);
+
+        // set registered_from filter if isset
+        if($registeredFrom !== null) {
+            $gis->people->filters->registered->from = new \DateTime($registeredFrom);
+        }
 
         // iterate through all persons visible to the GIS user
         foreach($gis->people as $remote) {
             // search for person in the national database
             $national = Person::where('id', $remote->id)->with(['programmes', 'managers'])->first();
 
-            // create it if it does not exist
+            // create it if it does not exist, else skip it
             if($national == null) {
                 $national = new Person();
                 $national->id = $remote->id;
+                $national->updateFromGIS($remote);
             }
 
-            // set / update scalar  values
-            $scalarFields = ['email', 'first_name', 'middle_name', 'last_name', 'dob', 'interviewed', 'status', 'phone', 'location', 'nps_score'];
-            foreach($scalarFields as $field) {
-                if(isset($remote->$field)) {
-                    $national->$field = $remote->$field;
-                }
-            }
-
-            // set / update special field
-            $national->is_employee = ($remote->is_employee) ? true : false;
-            $national->profile_picture_url = $remote->profile_photo_url;
-            $national->contacted_at = Carbon::parse($remote->contacted_at);
-            if(isset($remote->cv_url->url)) $national->cv_url = $remote->cv_url->url;
-
-            // update Object fields
-            if(isset($remote->home_lc->id)) {
-                $lc = Entity::where('id', $remote->home_lc->id)->first();
-                if($lc != null) {
-                    $national->home_entity = $lc->_internal_id;
-                }
-            }
-            if(isset($remote->contacted_by->id)) {
-                $contactPerson = Person::where('id', $remote->contacted_by->id)->first();
-                if($contactPerson != null) {
-                    $national->contacted_by = $contactPerson->_internal_id;
-                }
-            }
-
-            // save to database
-            $national->save();
-
-            // sync programmes (programmes have no internal id, relationships are directly mapped via the gis id)
-            $programmeIds = [];
-            foreach($remote->programmes as $programme) {
-                $programmeNational = Programme::find($programme->id);
-                if($programmeNational != null) {
-                    $programmeIds[] = $programme->id;
-                }
-            }
-            $national->programmes()->sync($programmeIds);
-
-            // sync managers
-            $managerIds = [];
-            foreach($remote->managers as $manager) {
-                $managerNational = Person::where('id', $manager->id)->first();
-                if($managerNational != null) {
-                    $managerIds[] = $managerNational->_internal_id;
-                }
-            }
-            $national->managers()->sync($managerIds);
         }
     }
 }

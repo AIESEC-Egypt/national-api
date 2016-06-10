@@ -43,6 +43,13 @@ class Person extends Model implements AuthenticatableContract, AuthorizableContr
     protected $primaryKey = '_internal_id';
 
     /**
+     * date fields
+     *
+     * @var array
+     */
+    protected $dates = ['contacted_at'];
+
+    /**
      * returns all tasks of the person
      */
     public function tasks() {
@@ -79,125 +86,174 @@ class Person extends Model implements AuthenticatableContract, AuthorizableContr
 
     /**
      * returns all positions of the person
-     * @param bool $current true if only currently active positions should be considered
-     * @return mixed
      */
-    public function positions($current) {
-        if($current) {
-            return $this->hasMany('App\Position')->where('positions.start_date', '<=', Carbon::now())->where('positions.end_date', '>=', Carbon::now());
-        } else {
-            return $this->hasMany('App\Position');
-        }
+    public function positions() {
+        return $this->hasMany('App\Position');
     }
 
     /**
-     * return all positions in an EB
-     * @param bool $current true if only currently active positions should be considered
-     * @return mixed
+     * returns the positions of all people who are a team leader of the person
      */
-    public function positionsEB($current = false) {
-        return $this->positions($current)->leftJoin('teams', 'positions.team_id', '=', 'teams._internal_id')->where('team_type', '=', 'eb')->whereNull('teams.deleted_at')->select('positions.*');
+    public function leadersAsPositions() {
+        return $this->hasMany('App\Position')->leftJoin('positions as parents', 'positions.parent_id', '=', 'parents._internal_id')->whereNull('parents.deleted_at')->whereNotNull('parents._internal_id')->select('parents.*');
     }
 
     /**
-     * return all positions as member. This excludes positions in an EB, or as any kind of leader
-     * @param bool|true $current true if only currently active positions should be considered
-     * @return mixed
+     * returns the persons which are a leader for this person
      */
-    public function positionsMember($current = false) {
-        return $this->positions($current)->leftJoin('teams', 'positions.team_id', '=', 'teams._internal_id')->where('team_type', '=', 'normal')->whereNull('teams.deleted_at')->leftJoin('positions as subpos', 'subpos.parent_id', '=', 'positions._internal_id')->whereNull('subpos._internal_id')->whereNull('subpos.deleted_at')->whereNotNull('positions.parent_id')->select('positions.*');
-    }
-
-    /**
-     * return all positions as leader. This includes all positions, which have child positions
-     * @param bool $current set true of only currently active positions shold be considered
-     * @param string $team_type standard '*', set to 'eb'|'normal' to consider only positions in those team types
-     * @param null|bool $tl_only standard null to return team leader and subteam leader positions. Set to true to return only teamleader positions and set to false to return only subteam leader positions.
-     * @return mixed
-     */
-    public function positionsLeader($current = false, $team_type = '*', $tl_only = null) {
-        $r = $this->positions($current)->leftJoin('positions as subpos', 'subpos.parent_id', '=', 'positions._internal_id')->whereNull('subpos.deleted_at')->whereNotNull('subpos._internal_id')->distinct()->select('positions.*');
-        if($team_type != '*') {
-            $r = $r->leftJoin('teams', 'positions.team_id', '=', 'teams._internal_id')->whereNull('teams.deleted_at')->where('team_type', $team_type);
-        }
-        if($tl_only !== null) {
-            if($tl_only === true) {
-                $r = $r->whereNull('positions.parent_id');
-            } else {
-                $r = $r->whereNotNull('positions.parent_id');
-            }
-        }
-        return $r;
-    }
-
-    /**
-     * returns the positions of all people who are a team leader of one of the persons positions
-     * @param bool $current set to true to only recognise currently active positions
-     * @return mixed
-     */
-    public function leadersAsPositions($current = false) {
-        $r = $this->hasMany('App\Position')->leftJoin('positions as parents', 'positions.parent_id', '=', 'parents._internal_id')->whereNull('parents.deleted_at')->whereNotNull('parents._internal_id')->select('parents.*');
-        if($current) {
-            return $r->where('positions.start_date', '<=', Carbon::now())->where('positions.end_date', '>=', Carbon::now())->where('parents.start_date', '<=', Carbon::now())->where('parents.end_date', '>=', Carbon::now());
-        } else {
-            return $r;
-        }
-    }
-
-    /**
-     * returns the persons which are a leader for this person in any position
-     * @param bool $current set to true to only recognise currently active positions
-     * @return mixed
-     */
-    public function leadersAsPersons($current = false) {
-        $r = $this->belongsTo('App\Person')->whereNotNull('persons._internal_id')->orWhere('persons._internal_id', '=', $this->_internal_id)->leftJoin('positions', 'persons._internal_id', '=', 'positions.person_id')->whereNull('positions.deleted_at')->leftJoin('positions as parents', 'parents._internal_id', '=', 'positions.parent_id')->whereNull('parents.deleted_at')->leftJoin('persons as leaders', 'leaders._internal_id', '=', 'parents.person_id')->whereNotNull('leaders._internal_id')->distinct()->select('leaders.*');
-        if($current) {
-            return $r->where('positions.start_date', '<=', Carbon::now())->where('positions.end_date', '>=', Carbon::now())->where('parents.start_date', '<=', Carbon::now())->where('parents.end_date', '>=', Carbon::now());
-        } else {
-            return $r;
-        }
+    public function leadersAsPersons() {
+        return $this->belongsTo('App\Person')->whereNotNull('persons._internal_id')->orWhere('persons._internal_id', '=', $this->_internal_id)->leftJoin('positions', 'persons._internal_id', '=', 'positions.person_id')->whereNull('positions.deleted_at')->leftJoin('positions as parents', 'parents._internal_id', '=', 'positions.parent_id')->whereNull('parents.deleted_at')->leftJoin('persons as leaders', 'leaders._internal_id', '=', 'parents.person_id')->whereNotNull('leaders._internal_id')->distinct()->select('leaders.*');
     }
 
     /**
      * returns all positions of members of this person
-     * @param bool $current set to true to only recognise currently active positions
-     * @return mixed
      */
-    public function membersAsPositions($current = false) {
-        $r = $this->positions($current)->leftJoin('positions as members', 'members.parent_id', '=', 'positions._internal_id')->whereNull('members.deleted_at')->whereNotNull('members._internal_id');
-        if($current) {
-            return $r->where('members.start_date', '<=', Carbon::now())->where('members.end_date', '>=', Carbon::now());
-        } else {
-            return $r;
-        }
+    public function membersAsPositions() {
+        return $this->hasMany('App\Position')->leftJoin('positions as members', 'members.parent_id', '=', 'positions._internal_id')->whereNull('members.deleted_at')->whereNotNull('members._internal_id');
     }
 
     /**
      * returns the persons which are a leader for this person in any position
-     * @param bool $current set to true to only recognise currently active positions
-     * @return mixed
      */
-    public function membersAsPersons($current = false) {
-        $r = $this->belongsTo('App\Person')->whereNotNull('persons._internal_id')->orWhere('persons._internal_id', '=', $this->_internal_id)->leftJoin('positions', 'persons._internal_id', '=', 'positions.person_id')->whereNull('positions.deleted_at')->leftJoin('positions as childs', 'positions._internal_id', '=', 'childs.parent_id')->whereNull('childs.deleted_at')->leftJoin('persons as members', 'members._internal_id', '=', 'childs.person_id')->whereNotNull('members._internal_id')->distinct()->select('members.*');
-        if($current) {
-            return $r->where('positions.start_date', '<=', Carbon::now())->where('positions.end_date', '>=', Carbon::now())->where('childs.start_date', '<=', Carbon::now())->where('childs.end_date', '>=', Carbon::now());
-        } else {
-            return $r;
-        }
+    public function membersAsPersons() {
+        return $this->belongsTo('App\Person')->whereNotNull('persons._internal_id')->orWhere('persons._internal_id', '=', $this->_internal_id)->leftJoin('positions', 'persons._internal_id', '=', 'positions.person_id')->whereNull('positions.deleted_at')->leftJoin('positions as childs', 'positions._internal_id', '=', 'childs.parent_id')->whereNull('childs.deleted_at')->leftJoin('persons as members', 'members._internal_id', '=', 'childs.person_id')->whereNotNull('members._internal_id')->distinct()->select('members.*');
     }
-
 
     /**
      * returns all teams the person has a position in
-     * @param bool $current set to true to only recognise currently active positions
-     * @return mixed
      */
-    public function teams($current = false) {
-        $r = $this->hasManyThrough('App\Team', 'App\Position');
-        if($current) {
-            return $r->where('positions.start_date', '<=', Carbon::now())->where('positions.end_date', '>=', Carbon::now());
-        } else {
-            return $r;
+    public function teams() {
+        return $this->hasManyThrough('App\Team', 'App\Position');
+    }
+
+    /**
+     * returns all KPIs of this person
+     */
+    public function KPIs() {
+        return $this->hasMany('App\KPI');
+    }
+
+    /**
+     * scope query to a specific team type
+     */
+    public function scopeTeamType($query, $team_type) {
+        return $query->leftJoin('teams', 'positions.team_id', '=', 'teams._internal_id')->where('team_type', '=', $team_type)->whereNull('teams.deleted_at')->select('positions.*');
+    }
+
+    /**
+     * scope query to non leader positions
+     */
+    public function scopeNonLeader($query) {
+        return $query->leftJoin('positions as subpos', 'subpos.parent_id', '=', 'positions._internal_id')->whereNull('subpos._internal_id')->whereNull('subpos.deleted_at')->whereNotNull('positions.parent_id')->select('positions.*');
+    }
+
+    /**
+     * scope query to leader positions only
+     */
+    public function scopeLeader($query) {
+        return $query->leftJoin('positions as subpos', 'subpos.parent_id', '=', 'positions._internal_id')->whereNull('subpos.deleted_at')->whereNotNull('subpos._internal_id')->distinct()->select('positions.*');
+    }
+
+    /**
+     * scope query to non team leader positions (works only with Leader scope)
+     */
+    public function scopeNonTeamLeader($query) {
+        return $query->whereNotNull('positions.parent_id');
+    }
+
+    /**
+     * scope query to non sub team leader positions (works only with Leader scope)
+     */
+    public function scopeNonSubTeamLeader($query) {
+        return $query->whereNull('positions.parent_id');
+    }
+
+    /**
+     * scope query to only currently active positions
+     */
+    public function scopeCurrent($query) {
+        $query = $query->where('positions.start_date', '<=', Carbon::now())->where('positions.end_date', '>=', Carbon::now());
+        foreach($query->getQuery()->joins as $join) {
+            switch($join->table) {
+                case 'positions as childs':
+                    $query = $query->where('childs.start_date', '<=', Carbon::now())->where('childs.end_date', '>=', Carbon::now());
+                    break;
+
+                case 'positions as parents':
+                    $query = $query->where('parents.start_date', '<=', Carbon::now())->where('parents.end_date', '>=', Carbon::now());
+                    break;
+            }
         }
+        return $query;
+    }
+
+    /**
+     * updates this persons values with the values from a GIS response
+     *
+     * @param object $remote person object from the GIS
+     */
+    public function updateFromGIS($remote) {
+        /*
+         * prepare remote object
+         */
+        // make is_employee an bool
+        if(isset($remote->is_employee) && is_null($remote->is_employee)) $remote->is_employee = false;
+        // profile_picture_url is sometimes called profile_photo_url
+        if(isset($remote->profile_photo_url) && !isset($remote->profile_picture_url)) $remote->profile_picture_url = $remote->profile_photo_url;
+        // the url of the cv is in the cv_url object
+        if(isset($remote->cv_url) && is_object($remote->cv_url)) $remote->cv_url = $remote->cv_url->url;
+        // translate home_lc id to home_entity
+        if(isset($remote->home_lc) && isset($remote->home_lc->id)) {
+            $lc = Entity::where('id', $remote->home_lc->id)->first();
+            $remote->home_entity = (is_null($lc)) ? null : $lc->_internal_id;
+        }
+        // translate contacted_by id
+        if(isset($remote->contacted_by) && isset($remote->contacted_by->id)) {
+            $person = Person::where('id', $remote->contacted_by->id)->first();
+            $remote->contacted_by = (is_null($person)) ? null : $person->_internal_id;
+        }
+
+        /*
+         * update scalar values (and those which were made scalar)
+         */
+        $scalarFields = ['email', 'first_name', 'middle_name', 'last_name', 'dob', 'home_entity', 'profile_picture_url', 'interviewed', 'is_employee', 'status', 'phone', 'location', 'nps_score', 'contacted_at', 'contacted_by', 'cv_url'];
+        foreach($scalarFields as $field) {
+            if(isset($remote->$field) && $remote->$field != $this->$field) {
+                $this->$field = $remote->$field;
+                //@Todo update push queue
+            }
+        }
+
+        // save to database
+        $this->save();
+
+        /*
+         * sync programmes
+         *
+         * (programmes have no internal id, relationships are directly mapped via the gis id)
+         * These programmes are calculated on GIS side and different from those in the profile -> no queue update necessary
+         */
+        $programmeIds = [];
+        foreach($remote->programmes as $programme) {
+            $programmeNational = Programme::find($programme->id);
+            if($programmeNational != null) {
+                $programmeIds[] = $programme->id;
+            }
+        }
+        $this->programmes()->sync($programmeIds);
+
+        /*
+         * sync managers
+         */
+        $managerIds = [];
+        foreach($remote->managers as $manager) {
+            $managerNational = Person::where('id', $manager->id)->first();
+            if($managerNational != null) {
+                $managerIds[] = $managerNational->_internal_id;
+            }
+        }
+        $this->managers()->sync($managerIds);
+        // @Todo update push queue
+
     }
 }

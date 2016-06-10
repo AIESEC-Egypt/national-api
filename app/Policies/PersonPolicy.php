@@ -33,7 +33,7 @@ class PersonPolicy {
             return true;
         } else {
             // check if it is a team leader of the person
-            foreach($person->leadersAsPersons(true)->get() as $leader) {
+            foreach($person->leadersAsPersons()->current()->get() as $leader) {
                 if($user->_internal_id === $leader->_internal_id) return true;
             }
             // check if it is a manager of the person
@@ -57,7 +57,7 @@ class PersonPolicy {
             return true;
         } else {
             // check if it is a team leader of the person
-            foreach($person->leadersAsPersons(true)->get() as $leader) {
+            foreach($person->leadersAsPersons()->current()->get() as $leader) {
                 if($user->_internal_id === $leader->_internal_id) return true;
             }
             // check if it is a manager of the person

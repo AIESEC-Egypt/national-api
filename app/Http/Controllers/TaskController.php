@@ -23,6 +23,8 @@ class TaskController extends Controller
     }
 
     /**
+     * returns all tasks scopes to the current user
+     *
      * @param Request $request
      */
     public function all(Request $request) {
@@ -30,7 +32,7 @@ class TaskController extends Controller
         $person = Auth::user();
 
         // start building a query to retrieve the person ids, by starting with all members of the current user
-        $persons = $person->membersAsPersons(true);
+        $persons = $person->membersAsPersons()->current();
 
         // apply the teams filter
         if($request->has('teams')) {
@@ -54,13 +56,15 @@ class TaskController extends Controller
             }
         }
 
+        // we need to know for the skip_own_tasks filter if the current person is in the persons filter array
+        $inPersonsFilter = false;
+
         // apply the persons filter
         if($request->has('persons') && !is_null($persons)) {
             if(!is_array($request->input('persons')) || count($request->input('persons')) < 1) {
                 $persons = null;
             } else {
                 $personIds = [];
-                $inPersonsFilter = false;   // we need to know for the skip_own_tasks filter if the current person is in the persons filter array
 
                 // iterate through persons filter to get internal ids
                 foreach ($request->input('persons') as $personId) {

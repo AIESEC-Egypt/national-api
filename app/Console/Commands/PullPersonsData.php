@@ -9,7 +9,9 @@
 namespace App\Console\Commands;
 
 
+use App\Person;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 
 class PullPersonsData extends Command
 {
@@ -29,8 +31,6 @@ class PullPersonsData extends Command
 
     /**
      * Create a new command instance.
-     *
-     * @return void
      */
     public function __construct()
     {
@@ -39,11 +39,28 @@ class PullPersonsData extends Command
 
     /**
      * Execute the console command.
-     *
-     * @return mixed
+     * @param int $id worker id
+     * @param int $total number of workers
      */
-    public function handle()
+    public function handle(integer $id = null, integer $total = null)
     {
-        //
+        // prepare arguments
+        if(is_null($id)) $id = 0;
+        if(is_null($total)) $total = 1;
+        
+        // get GIS instance
+        $gis = App::make('gis')->getInstance();
+
+        // get the persons of this worker in chunks
+        Person::where(DB::raw('MOD(`id`, ' . intval($total) . ')'), '=', $id)->chunk(50, function($persons) use ($gis) {
+            // iterate through persons of this chunk
+            foreach($persons as $person) {
+                // get data from GIS
+                $res = $gis->people[$person->id]->get();
+
+                // update person
+                $person->updateFromGIS($res);
+            }
+        });
     }
 }
