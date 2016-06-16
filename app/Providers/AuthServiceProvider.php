@@ -2,10 +2,18 @@
 
 namespace App\Providers;
 
+use App\Entity;
+use App\KPI;
 use App\Person;
+use App\Policies\EntityPolicy;
+use App\Policies\KPIPolicy;
 use App\Policies\PersonPolicy;
+use App\Policies\PositionPolicy;
+use App\Policies\TeamPolicy;
+use App\Position;
 use App\Task;
 use App\Policies\TaskPolicy;
+use App\Team;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Cache;
@@ -88,5 +96,9 @@ class AuthServiceProvider extends ServiceProvider
         // defining Gates
         Gate::policy(Task::class, TaskPolicy::class);
         Gate::policy(Person::class, PersonPolicy::class);
+        Gate::policy(KPI::class, KPIPolicy::class);
+        Gate::policy(Entity::class, EntityPolicy::class);
+        Gate::policy(Position::class, PositionPolicy::class);
+        Gate::policy(Team::class, TeamPolicy::class);
     }
 }

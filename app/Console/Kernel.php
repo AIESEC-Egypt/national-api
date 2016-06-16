@@ -19,6 +19,8 @@ class Kernel extends ConsoleKernel
         'App\Console\Commands\PullProgrammes',
         'App\Console\Commands\PullPositions',
         'App\Console\Commands\KPIsTasks',
+        'App\Console\Commands\KPIsTeams',
+        'App\Console\Commands\KPIsEntities',
         'App\Console\Commands\Test'
     ];
 
@@ -31,5 +33,6 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule)
     {
         $schedule->command('kpis:tasks')->sundays()->daily();
+        $schedule->command('kpis:teams')->sundays()->daily();
     }
 }

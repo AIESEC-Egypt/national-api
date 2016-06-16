@@ -10,7 +10,7 @@
 |
 */
 
-/**
+/*
  * Person routes (v1)
  */
 // GET /v1/persons/{person_id}.json
@@ -23,11 +23,17 @@ $app->group(['prefix' => 'v1/persons/{person_id}', 'namespace' => 'App\Http\Cont
     // POST /v1/persons/{person_id}/tasks.json
     $app->post('tasks.json', ['as' => 'person_add_task', 'uses' => 'PersonController@addTask']);
     
-    // GET /v1/persons/{person_id}/subPositions.json
-    $app->get('subPositions.json', ['as' => 'person_sub_positions', 'uses' => 'PersonController@subPositions']);
+    // GET /v1/persons/{person_id}/positions.json
+    $app->get('positions.json', ['as' => 'person_positions', 'uses' => 'PersonController@positions']);
+
+    // GET /v1/persons/{person_id}/kpis.json
+    $app->get('kpis.json', ['as' => 'person_kpis', 'uses' => 'PersonController@kpis']);
+
+    // GET /v1/persons/{person_id}/managing.json
+    $app->get('managing.json', ['as' => 'person_managing', 'uses' => 'PersonController@managing']);
 });
 
-/**
+/*
  * Tasks routes (v1)
  */
 // GET /v1/tasks.json
@@ -54,9 +60,43 @@ $app->group(['prefix' => 'v1/tasks/{task_id}', 'namespace' => 'App\Http\Controll
     $app->post('approve.json', ['as' => 'approve_task', 'uses' => 'TaskController@approve']);
 });
 
-/**
- * List routes (v1)
+/*
+ * KPI routes (v1)
  */
-$app->group(['prefix' => 'v1/lists', 'namespace' => 'App\Http\Controllers'], function () use ($app) {
+$app->group(['prefix' => 'v1/kpis', 'namespace' => 'App\Http\Controllers'], function () use ($app) {
 
+    // GET /v1/kpis/{kpi_id}.json
+    $app->get('{kpi_id}.json', ['as' => 'get_kpi', 'uses' => 'KPIController@view']);
+
+    // GET /v1/kpis/{kpi_id}/values.json
+    $app->get('{kpi_id}/values.json', ['as' => 'get_kpi_values', 'uses' => 'KPIController@values']);
 });
+
+/*
+ * Entity routes (v1)
+ */
+// GET /v1/entities/{entity_id}.json
+$app->get('v1/entities/{entity_id}.json', ['as' => 'get_entity', 'uses' => 'EntityController@view']);
+
+// GET /v1/entities/{entity_id}/kpis.json
+$app->get('v1/entities/{entity_id}/kpis.json', ['as' => 'get_entity_kpis', 'uses' => 'EntityController@kpis']);
+
+
+/*
+ * Position routes (v1)
+ */
+// GET /v1/positions/{position_id}.json
+$app->get('v1/positions/{position_id}.json', ['as' => 'get_position', 'uses' => 'PositionController@view']);
+
+/*
+ * Team routes (v1)
+ */
+// GET /v1/teams/{team_id}.json
+$app->get('v1/teams/{team_id}.json', ['as' => 'get_team', 'uses' => 'TeamController@view']);
+
+// GET /v1/teams/{team_id}/kpis.json
+$app->get('v1/teams/{team_id}/kpis.json', ['as' => 'get_team_kpis', 'uses' => 'TeamController@kpis']);
+
+// GET /v1/teams/{team_id}/positions.json
+$app->get('v1/teams/{team_id}/positions.json', ['as' => 'get_team_positions', 'uses' => 'TeamController@positions']);
+

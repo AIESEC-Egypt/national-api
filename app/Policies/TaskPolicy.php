@@ -21,20 +21,8 @@ class TaskPolicy {
      */
     public function view(Person $person, Task $task) {
         if(is_null($task->deleted_at)) {
-            if($task->person_id === $person->_internal_id) {
+            if( $task->person_id === $person->_internal_id || $task->added_by === $person->_internal_id || $person->isLeaderFor($task->_person_id) || $person->isManagerOf($task->person_id) ) {
                 return true;
-            } elseif($task->added_by === $person->_internal_id) {
-                return true;
-            } else {
-                // check if task owner is member of current user
-                foreach($person->membersAsPersons()->current()->get() as $member) {
-                    if($member->_internal_id === $task->person_id) return true;
-                }
-
-                // check if current person is manager of task owner
-                foreach($person->managing as $p) {
-                    if($p->_internal_id === $task->person_id) return true;
-                }
             }
         }
         return false;
@@ -49,20 +37,8 @@ class TaskPolicy {
      */
     public function done(Person $person, Task $task) {
         if(!$task->approved && !$task->done && is_null($task->deleted_at)) {
-            if($task->person_id === $person->_internal_id) {
+            if( $task->person_id === $person->_internal_id || $task->added_by === $person->_internal_id || $person->isLeaderFor($task->_person_id) || $person->isManagerOf($task->person_id) ) {
                 return true;
-            } elseif($task->added_by === $person->_internal_id) {
-                return true;
-            } else {
-                // check if task owner is member of current user
-                foreach($person->membersAsPersons()->current()->get() as $member) {
-                    if($member->_internal_id === $task->person_id) return true;
-                }
-
-                // check if current person is manager of task owner
-                foreach($person->managing as $p) {
-                    if($p->_internal_id === $task->person_id) return true;
-                }
             }
         }
         return false;
@@ -76,19 +52,9 @@ class TaskPolicy {
      * @return bool
      */
     public function delete(Person $person, Task $task) {
-        if(!$task->approved && is_null($task->deleted_at)) {
-            if($task->added_by === $person->_internal_id) {
+        if(!$task->approved && !$task->done && is_null($task->deleted_at)) {
+            if( $task->added_by === $person->_internal_id || $person->isLeaderFor($task->_person_id) || $person->isManagerOf($task->person_id) ) {
                 return true;
-            } else {
-                // check if task owner is member of current user
-                foreach($person->membersAsPersons()->current()->get() as $member) {
-                    if($member->_internal_id === $task->person_id) return true;
-                }
-
-                // check if current person is manager of task owner
-                foreach($person->managing as $p) {
-                    if($p->_internal_id === $task->person_id) return true;
-                }
             }
         }
         return false;
@@ -103,20 +69,8 @@ class TaskPolicy {
      */
     public function update(Person $person, Task $task) {
         if(!$task->approved && is_null($task->deleted_at)) {
-            if($task->person_id === $person->_internal_id) {
+            if( $task->person_id === $person->_internal_id || $task->added_by === $person->_internal_id || $person->isLeaderFor($task->_person_id) || $person->isManagerOf($task->person_id) ) {
                 return true;
-            } elseif($task->added_by === $person->_internal_id) {
-                return true;
-            } else {
-                // check if task owner is member of current user
-                foreach($person->membersAsPersons()->current()->get() as $member) {
-                    if($member->_internal_id === $task->person_id) return true;
-                }
-
-                // check if current person is manager of task owner
-                foreach($person->managing as $p) {
-                    if($p->_internal_id === $task->person_id) return true;
-                }
             }
         }
         return false;
@@ -130,19 +84,9 @@ class TaskPolicy {
      * @return bool
      */
     public function update_estimated(Person $person, Task $task) {
-        if(!$task->approved && is_null($task->deleted_at) && !$task->done) {
-            if($task->added_by === $person->_internal_id) {
+        if(!$task->approved && !$task->done && is_null($task->deleted_at)) {
+            if( $task->added_by === $person->_internal_id || $person->isLeaderFor($task->_person_id) || $person->isManagerOf($task->person_id) ) {
                 return true;
-            } else {
-                // check if task owner is member of current user
-                foreach($person->membersAsPersons()->current()->get() as $member) {
-                    if($member->_internal_id === $task->person_id) return true;
-                }
-
-                // check if current person is manager of task owner
-                foreach($person->managing as $p) {
-                    if($p->_internal_id === $task->person_id) return true;
-                }
             }
         }
         return false;
@@ -156,19 +100,9 @@ class TaskPolicy {
      * @return bool
      */
     public function update_due(Person $person, Task $task) {
-        if(!$task->approved && is_null($task->deleted_at) && !$task->done) {
-            if($task->added_by === $person->_internal_id) {
+        if(!$task->approved && !$task->done && is_null($task->deleted_at)) {
+            if( $task->added_by === $person->_internal_id || $person->isLeaderFor($task->_person_id) || $person->isManagerOf($task->person_id) ) {
                 return true;
-            } else {
-                // check if task owner is member of current user
-                foreach($person->membersAsPersons()->current()->get() as $member) {
-                    if($member->_internal_id === $task->person_id) return true;
-                }
-
-                // check if current person is manager of task owner
-                foreach($person->managing as $p) {
-                    if($p->_internal_id === $task->person_id) return true;
-                }
             }
         }
         return false;
@@ -182,18 +116,9 @@ class TaskPolicy {
      * @return bool
      */
     public function approve(Person $person, Task $task) {
-        if(is_null($task->deleted_at) && !$task->approved) {
-            // check if current user added the task and is not the owner
-            if($task->person_id != $task->added_by && $task->added_by === $person->_internal_id) return true;
-
-            // check if task owner is member of current user
-            foreach($person->membersAsPersons()->current()->get() as $member) {
-                if($member->_internal_id === $task->person_id) return true;
-            }
-
-            // check if current person is manager of task owner
-            foreach($person->managing as $p) {
-                if($p->_internal_id === $task->person_id) return true;
+        if(!$task->approved && is_null($task->deleted_at)) {
+            if( ($task->person_id != $task->added_by && $task->added_by === $person->_internal_id) || $person->isLeaderFor($task->_person_id) || $person->isManagerOf($task->person_id) ) {
+                return true;
             }
         }
         return false;

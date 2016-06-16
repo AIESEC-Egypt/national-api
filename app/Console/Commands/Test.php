@@ -1,6 +1,7 @@
 <?php
 namespace App\Console\Commands;
 
+use App\Entity;
 use App\Person;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -37,7 +38,11 @@ class Test extends Command
      */
     public function handle()
     {
-        /*DB::connection()->enableQueryLog();
-        print_r(DB::getQueryLog());*/
+        DB::enableQueryLog();
+        $person = Person::has('positions.parent.person')->get();
+        for($i = 0; $i < 5 && $i < count($person); $i++) {
+            print_r($person[$i]->parentPositionsRecursiveAsFlatCollection(true)->toArray());
+        }
+        print_r(DB::getQueryLog());
     }
 }

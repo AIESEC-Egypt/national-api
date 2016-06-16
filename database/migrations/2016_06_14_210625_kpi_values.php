@@ -16,11 +16,11 @@ class KpiValues extends Migration
             $table->increments('id');
             $table->integer('kpi_id')->unsigned();
             $table->foreign('kpi_id')->references('id')->on('kpis')->onDelete('cascade')->onUpdate('cascade');
+            $table->integer('date_id')->unsigned();
+            $table->foreign('date_id')->references('id')->on('kpi_values_date')->onDelete('cascade')->onUpdate('cascade');
             $table->float('value');
-            $table->timestamp('from')->nullable();
-            $table->timestamp('to')->nullable();
             $table->timestamp('calculated_at');
-            $table->unique(['kpi_id', 'from', 'to']);
+            $table->unique(['kpi_id', 'date_id']);
             $table->timestamps();
         });
     }

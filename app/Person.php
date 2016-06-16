@@ -2,9 +2,8 @@
 
 namespace App;
 
-use Carbon\Carbon;
 use Illuminate\Auth\Authenticatable;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Eloquent\Collection;
 use Laravel\Lumen\Auth\Authorizable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
@@ -51,6 +50,7 @@ class Person extends Model implements AuthenticatableContract, AuthorizableContr
 
     /**
      * returns all tasks of the person
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function tasks() {
         return $this->hasMany('App\Task');
@@ -58,6 +58,7 @@ class Person extends Model implements AuthenticatableContract, AuthorizableContr
 
     /**
      * returns all tasks which were added by the person
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function added_tasks() {
         return $this->hasMany('App\Task', 'added_by');
@@ -65,6 +66,7 @@ class Person extends Model implements AuthenticatableContract, AuthorizableContr
 
     /**
      * returns all managers of this person (this is related to EP managers and not positions in a team)
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
      */
     public function managers() {
         return $this->belongsToMany('App\Person', 'persons_managers', 'person_id', 'manager_id');
@@ -72,55 +74,200 @@ class Person extends Model implements AuthenticatableContract, AuthorizableContr
 
     /**
      * returns all persons which are managed by this person (this is related to EP managers and not positions in a team)
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
      */
     public function managing() {
         return $this->belongsToMany('App\Person', 'persons_managers', 'manager_id', 'person_id');
     }
 
     /**
+     * Determines if this person is a manager of $person
+     *
+     * @param Person|integer $person
+     * @return bool
+     */
+    public function isManagerOf($person) {
+        if($person instanceof Person) {
+            foreach($person->managers as $manager) {
+                if($manager->_internal_id === $this->_internal_id) {
+                    return true;
+                }
+            }
+        } else {
+            foreach($this->managing as $p) {
+                if($p->_internal_id === $person) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
      * returns all programmes of this person
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
      */
     public function programmes() {
         return $this->belongsToMany('App\Programme', 'persons_programmes');
     }
 
     /**
-     * returns all positions of the person
+     * all positions of the person
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function positions() {
         return $this->hasMany('App\Position');
     }
 
     /**
-     * returns the positions of all people who are a team leader of the person
+     * all direct child positions
+     * @return \Illuminate\Database\Query\Builder
      */
-    public function leadersAsPositions() {
-        return $this->hasMany('App\Position')->leftJoin('positions as parents', 'positions.parent_id', '=', 'parents._internal_id')->whereNull('parents.deleted_at')->whereNotNull('parents._internal_id')->select('parents.*');
+    public function childPositions() {
+        return Position::query()->select('childs.*')->from('positions')->where('positions.person_id', '=', $this->original['_internal_id'])
+            ->leftJoin('positions as childs', 'childs.parent_id', '=', 'positions._internal_id')
+            ->whereNull('childs.deleted_at')->whereNotNull('childs._internal_id');
     }
 
     /**
-     * returns the persons which are a leader for this person
+     * retrieves the child positions of this person recursively and returns them as flat collection (this means without the hierarchy)
+     *
+     * @param bool $current
+     * @param bool $withPerson
+     * @return Collection
      */
-    public function leadersAsPersons() {
-        return $this->belongsTo('App\Person')->whereNotNull('persons._internal_id')->orWhere('persons._internal_id', '=', $this->_internal_id)->leftJoin('positions', 'persons._internal_id', '=', 'positions.person_id')->whereNull('positions.deleted_at')->leftJoin('positions as parents', 'parents._internal_id', '=', 'positions.parent_id')->whereNull('parents.deleted_at')->leftJoin('persons as leaders', 'leaders._internal_id', '=', 'parents.person_id')->whereNotNull('leaders._internal_id')->distinct()->select('leaders.*');
+    public function childPositionsRecursiveAsFlatCollection($current = false, $withPerson = true) {
+        $positions = $this->positions();
+
+        if($current) {
+            $positions = $positions->current();
+        }
+
+        if($withPerson) {
+            $positions = $positions->with('person');
+        }
+
+        return $this->childPositionRecursion($positions->get(), $current, $withPerson, true);
     }
 
     /**
-     * returns all positions of members of this person
+     * loads child positions recursive into a flat collection
+     *
+     * @param $positions
+     * @param $current
+     * @param $withPerson
+     * @param bool $firstLevel
+     * @return Collection
      */
-    public function membersAsPositions() {
-        return $this->hasMany('App\Position')->leftJoin('positions as members', 'members.parent_id', '=', 'positions._internal_id')->whereNull('members.deleted_at')->whereNotNull('members._internal_id');
+    private function childPositionRecursion($positions, $current, $withPerson, $firstLevel = false) {
+        $result = new Collection();
+        $ids = [];
+        foreach($positions as $position) {
+            if(!$firstLevel) {
+                $result->add($position);
+            }
+            $ids[] = $position->_internal_id;
+        }
+        if(count($ids) > 0) {
+            $positions = Position::whereIn('parent_id', $ids)->distinct();
+            if($current) {
+                $positions = $positions->current();
+            }
+            if($withPerson) {
+                $positions = $positions->with('person');
+            }
+            $result = $result->merge($this->childPositionRecursion($positions, $current, $withPerson));
+        }
+        return $result;
     }
 
     /**
-     * returns the persons which are a leader for this person in any position
+     * Determines if this person is a leader for $person
+     *
+     * @param Person|integer $person either a Person object or the _internal_id attribute of a Person
+     * @param bool $current
+     * @return bool
      */
-    public function membersAsPersons() {
-        return $this->belongsTo('App\Person')->whereNotNull('persons._internal_id')->orWhere('persons._internal_id', '=', $this->_internal_id)->leftJoin('positions', 'persons._internal_id', '=', 'positions.person_id')->whereNull('positions.deleted_at')->leftJoin('positions as childs', 'positions._internal_id', '=', 'childs.parent_id')->whereNull('childs.deleted_at')->leftJoin('persons as members', 'members._internal_id', '=', 'childs.person_id')->whereNotNull('members._internal_id')->distinct()->select('members.*');
+    public function isLeaderFor($person, $current = true) {
+        if($person instanceof Person) {
+            $person = $person->_internal_id;
+        }
+        foreach($this->childPositionsRecursiveAsFlatCollection($current, true) as $child) {
+            if(isset($child->person->_internal_id) && $child->person->_internal_id === $person) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    /**
+     * returns all direct parent positions
+     * @return \Illuminate\Database\Query\Builder
+     */
+    public function parentPositions() {
+        return Position::query()->select('parents.*')->from('positions')->where('positions.person_id', '=', $this->original['_internal_id'])
+            ->leftJoin('positions as parents', 'parents._internal_id', '=', 'positions.parent_id')
+            ->whereNull('parents.deleted_at')->whereNotNull('parents._internal_id');
+
+    }
+
+    /**
+     * retrieves the parent positions of this person recursively and returns them as flat collection (this means without the hierarchy)
+     *
+     * @param bool $current
+     * @param bool $withPerson
+     * @return Collection
+     */
+    public function parentPositionsRecursiveAsFlatCollection($current = false, $withPerson = true) {
+        $positions = $this->positions();
+
+        if($current) {
+            $positions = $positions->current();
+        }
+
+        if($withPerson) {
+            $positions = $positions->with('person');
+        }
+
+        return $this->parentPositionRecursion($positions->get(), $current, $withPerson, true);
+    }
+
+    /**
+     * loads parent positions recursive into a flat collection
+     *
+     * @param $positions
+     * @param $current
+     * @param $withPerson
+     * @param bool $firstLevel
+     * @return Collection
+     */
+    private function parentPositionRecursion($positions, $current, $withPerson, $firstLevel = false) {
+        $result = new Collection();
+        $parentIds = [];
+        foreach($positions as $position) {
+            if(!$firstLevel) {
+                $result->add($position);
+            }
+            if($position->parent_id != null) {
+                $parentIds[] = $position->parent_id;
+            }
+        }
+        if(count($parentIds) > 0) {
+            $positions = Position::whereIn('_internal_id', $parentIds)->distinct();
+            if($current) {
+                $positions = $positions->current();
+            }
+            if($withPerson) {
+                $positions = $positions->with('person');
+            }
+            $result = $result->merge($this->parentPositionRecursion($positions, $current, $withPerson));
+        }
+        return $result;
     }
 
     /**
      * returns all teams the person has a position in
+     * @return \Illuminate\Database\Eloquent\Relations\HasManyThrough
      */
     public function teams() {
         return $this->hasManyThrough('App\Team', 'App\Position');
@@ -128,63 +275,84 @@ class Person extends Model implements AuthenticatableContract, AuthorizableContr
 
     /**
      * returns all KPIs of this person
+     * @return \Illuminate\Database\Eloquent\Relations\MorphMany
      */
     public function KPIs() {
-        return $this->hasMany('App\KPI');
+        return $this->morphMany('App\KPI', 'measurable');
     }
 
     /**
-     * scope query to a specific team type
+     * return all entities the person has a position in
+     * @return \Illuminate\Database\Query\Builder
      */
-    public function scopeTeamType($query, $team_type) {
-        return $query->leftJoin('teams', 'positions.team_id', '=', 'teams._internal_id')->where('team_type', '=', $team_type)->whereNull('teams.deleted_at')->select('positions.*');
+    public function entities() {
+        return Entity::query()->select('entities.*')->distinct()->from('positions')
+            ->where('positions.person_id', '=', $this->original['_internal_id'])->whereNull('positions.deleted_at')
+            ->leftJoin('teams', 'teams._internal_id', '=', 'positions.team_id')->whereNull('teams.deleted_at')
+            ->leftJoin('terms', 'terms._internal_id', '=', 'teams.term_id')->whereNull('terms.deleted_at')
+            ->leftJoin('entities', 'entities._internal_id', '=', 'terms.entity_id');
     }
 
     /**
-     * scope query to non leader positions
+     * Determines if the person has a current position in $entity
+     *
+     * @param Entity|integer $entity
+     * @return bool
      */
-    public function scopeNonLeader($query) {
-        return $query->leftJoin('positions as subpos', 'subpos.parent_id', '=', 'positions._internal_id')->whereNull('subpos._internal_id')->whereNull('subpos.deleted_at')->whereNotNull('positions.parent_id')->select('positions.*');
-    }
+    public function isCurrentEntity($entity) {
+        // if necessary convert $entity to id
+        if($entity instanceof Entity) {
+            $entity = $entity->_internal_id;
+        }
 
-    /**
-     * scope query to leader positions only
-     */
-    public function scopeLeader($query) {
-        return $query->leftJoin('positions as subpos', 'subpos.parent_id', '=', 'positions._internal_id')->whereNull('subpos.deleted_at')->whereNotNull('subpos._internal_id')->distinct()->select('positions.*');
-    }
-
-    /**
-     * scope query to non team leader positions (works only with Leader scope)
-     */
-    public function scopeNonTeamLeader($query) {
-        return $query->whereNotNull('positions.parent_id');
-    }
-
-    /**
-     * scope query to non sub team leader positions (works only with Leader scope)
-     */
-    public function scopeNonSubTeamLeader($query) {
-        return $query->whereNull('positions.parent_id');
-    }
-
-    /**
-     * scope query to only currently active positions
-     */
-    public function scopeCurrent($query) {
-        $query = $query->where('positions.start_date', '<=', Carbon::now())->where('positions.end_date', '>=', Carbon::now());
-        foreach($query->getQuery()->joins as $join) {
-            switch($join->table) {
-                case 'positions as childs':
-                    $query = $query->where('childs.start_date', '<=', Carbon::now())->where('childs.end_date', '>=', Carbon::now());
-                    break;
-
-                case 'positions as parents':
-                    $query = $query->where('parents.start_date', '<=', Carbon::now())->where('parents.end_date', '>=', Carbon::now());
-                    break;
+        // get all the current entities and check them
+        foreach($this->entities()->current()->get() as $e) {
+            if($e->_internal_id === $entity) {
+                return true;
             }
         }
-        return $query;
+        return false;
+    }
+
+    /**
+     * checks recursively if $entity is a child in the current entity tree of the person
+     *
+     * @param Entity|int $entity
+     * @return bool
+     */
+    public function isChildInCurrentEntityTree($entity) {
+        // if necessary convert $entity to id
+        if($entity instanceof Entity) {
+            $entity = $entity->_internal_id;
+        }
+
+        // join child entities from current entities query
+        $entities = $this->entities()->current()->leftJoin('entities as childs', 'childs.parent_id', '=', 'entities._internal_id')->select('childs.*')->distinct()->get();
+
+        // create array to keep track of entities we already processed
+        $done = [];
+
+        // run as long as we got new child entities
+        while(count($entities) > 0) {
+            // keep track of entity Ids to use them as parent_ids
+            $parentIds = [];
+
+            // iterate through all the (child) entities we got
+            foreach($entities as $e) {
+                // return true if it is the wanted entity
+                if($e->_internal_id == $entity) {
+                    return true;
+                }
+                // mark entity as done
+                $done[] = $e->_internal_id;
+                // save id as parent_id
+                $parentIds[] = $e->_internal_id;
+            }
+
+            // get all child entities ($parentIds) of the entities we iterated through, but not those we already processed ($done)
+            $entities = Entity::query()->whereIn('parent_id', $parentIds)->whereNotIn('_internal_id', $done)->get();
+        }
+        return false;
     }
 
     /**
@@ -220,7 +388,6 @@ class Person extends Model implements AuthenticatableContract, AuthorizableContr
         foreach($scalarFields as $field) {
             if(isset($remote->$field) && $remote->$field != $this->$field) {
                 $this->$field = $remote->$field;
-                //@Todo update push queue
             }
         }
 
@@ -253,7 +420,5 @@ class Person extends Model implements AuthenticatableContract, AuthorizableContr
             }
         }
         $this->managers()->sync($managerIds);
-        // @Todo update push queue
-
     }
 }

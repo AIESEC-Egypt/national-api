@@ -2,7 +2,6 @@
 
 namespace App;
 
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Model;
 
 class Programme extends Model
@@ -28,6 +27,10 @@ class Programme extends Model
      */
     protected $hidden = [];
 
+    /**
+     * returns the persons which participate in this programme
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
+     */
     public function persons() {
         return $this->belongsToMany('App\Person', 'persons_programmes');
     }

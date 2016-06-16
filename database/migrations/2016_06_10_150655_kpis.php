@@ -14,12 +14,11 @@ class Kpis extends Migration
     {
         Schema::create('kpis', function(Blueprint $table) {
             $table->increments('id');
-            $table->enum('type', ['tasks']);
+            $table->enum('type', ['tasks', 'teams', 'positions', 'persons']);
             $table->string('subtype')->nullable()->default(null);
-            $table->integer('person_id')->unsigned();
-            $table->foreign('person_id')->references('_internal_id')->on('persons')->onDelete('cascade')->onUpdate('cascade');
+            $table->morphs('measurable');
             $table->enum('unit', ['number', 'percentage', 'minutes']);
-            $table->unique(['type', 'subtype', 'person_id']);
+            $table->unique(['type', 'subtype', 'measurable_type', 'measurable_id']);
             $table->timestamps();
             $table->softDeletes();
         });

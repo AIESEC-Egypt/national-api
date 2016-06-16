@@ -21,31 +21,49 @@ class KPI extends Model
      *
      * @var array
      */
-    protected $fillable = ['type', 'subtype'];
+    protected $fillable = ['type', 'subtype', 'unit'];
 
     /**
      * The attributes excluded from the model's JSON form.
      *
      * @var array
      */
-    protected $hidden = ['deleted_at'];
+    protected $hidden = ['deleted_at', 'measurable_id'];
 
     /**
      * date attributes
      *
      * @var array
      */
-    protected $dates = ['start_date', 'end_date'];
+    protected $dates = [];
 
-    public function person() {
-        return $this->belongsTo('App\Person');
+    /**
+     * returns the object this KPI is assigned to
+     * @return \Illuminate\Database\Eloquent\Relations\MorphTo
+     */
+    public function measurable() {
+        return $this->morphTo();
     }
 
+    /**
+     * returns the values of this kpi
+     * @return \Illuminate\Database\Query\Builder
+     */
     public function values() {
-        return $this->hasMany('App\KPIvalue', 'kpi_id');
+        return $this->hasMany('App\KPIvalue', 'kpi_id')->with('date');
+    }
+    
+    /**
+     * returns the relation to the latest value (for performance reasons use this only on collections)
+     */
+    public function latestValue() {
+        return $this->hasMany('App\KPIvalue', 'kpi_id')->latest();
     }
 
-    public function scopeLatest($query) {
-        return $query->orderBy('calculated', 'desc')->limit(1);
+    /**
+     * return the query to select the newest
+     */
+    public function singleLatestValue() {
+
     }
 }

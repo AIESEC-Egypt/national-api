@@ -7,6 +7,7 @@ use App\Task;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class PersonController extends Controller
 {
@@ -25,11 +26,13 @@ class PersonController extends Controller
      * @return mixed
      */
     private function getPerson($id) {
-        // when the request uses the internal id the givven id starts with an underscore
-        if(substr($id, 0, 1) == '_') {
+        // check for current person
+        if($id == "current") {  // alias for current user
+            return Auth::user();
+        } elseif(substr($id, 0, 1) == '_') {  // when the request uses the internal id the given id starts with an underscore
             // get person via _internal_id
             return Person::findOrFail(substr($id, 1));
-        } else {
+        } else {    // get user via GIS id
             // get person via GIS id
             return Person::where('id', $id)->firstOrFail();
         }
@@ -53,9 +56,9 @@ class PersonController extends Controller
     }
 
     /**
-     * returns the not approved tasks a person
+     * returns the not approved tasks of a person
      *
-     * @GetParam bool skip_done optional
+     * @GetParam bool $skip_done optional
      *
      * @param Request $request
      * @param $personId
@@ -129,30 +132,106 @@ class PersonController extends Controller
     }
 
     /**
-     * returns the positions lead by the specified person
+     * returns the positions of a person
      *
-     * @GetParam bool $current
+     * @GetParam bool $only_current optional
+     * @GetParam bool $only_leader optional
+     * @GetParam bool $skip_leader optional
+     * @GetParam bool $skip_teamleader optional
+     * @GetParam bool $skip_subteamleader optional
+     * @GetParam string $teamtype optional normal|eb
      *
      * @param Request $request
      * @param $personId
      * @return array
      */
-    public function subPositions(Request $request, $personId) {
+    public function positions(Request $request, $personId) {
         // get person from database
+        $person = $this->getPerson($personId);
+
+        // check Permissions
+        $this->authorize($person);
+
+        // build query
+        $positions = $person->positions();
+
+        if(Gate::allows('positions_childs', $person)) {
+            $positions = $positions->with('childs', 'childs.person');
+        }
+
+        if(Gate::allows('positions_kpis', $person)) {
+            $positions = $positions->with('childs.person.kpis', 'childs.person.kpis.latestValue');
+        }
+
+        // filter only_current
+        if(intval($request->input('only_current', 0)) === 1) {
+            $positions = $positions->current();
+            
+            if(Gate::allows('positions_kpis_current', $person)) {
+                $positions = $positions->with('childs.person.kpis', 'childs.person.kpis.latestValue');
+            }
+        }
+
+        // filter only_leader
+        if(intval($request->input('only_leader', 0)) === 1) {
+            $positions = $positions->leader();
+        }
+
+        // filter skip_leader
+        if(intval($request->input('only_leader', 0)) === 1) {
+            $positions = $positions->nonLeader();
+        }
+
+        // filter skip_teamleader
+        if(intval($request->input('skip_teamleder', 0)) === 1) {
+            $positions = $positions->nonTeamLeader();
+        }
+
+        // filter skip_subteamleader
+        if(intval($request->input('skip_subteamleader', 0)) === 1) {
+            $positions = $positions->nonSubTeamLeader();
+        }
+
+        // filter teamtype
+        if($request->has('teamtype')) {
+            $positions = $positions->teamType($request->input('teamtype'));
+        }
+
+        // return results
+        return ['positions' => $positions->get()];
+    }
+
+    /**
+     * Returns the KPIs of the person and their latest value
+     *
+     * @param $personId
+     * @return array
+     */
+    public function kpis($personId) {
+        // get person
         $person = $this->getPerson($personId);
 
         // check permissions
         $this->authorize($person);
 
-        // build query
-        $positions = $person->membersAsPosition()->with('person', 'team');
+        // return KPIs
+        return ['kpis' => $person->KPIs()->with('latestValue')->get()];
+    }
 
-        // proceed current filter
-        if($request->has('current') && intval($request->input('current')) === 1) {
-            $positions = $positions->current();
-        }
+    /**
+     * Returns the persons managed by the given person
+     *
+     * @param $personId
+     * @return mixed
+     */
+    public function managing($personId) {
+        // get person
+        $person = $this->getPerson($personId);
 
-        // get and return
-        return ['positions' => $positions->get()];
+        // check permissions
+        $this->authorize($person);
+
+        // return KPIs
+        return $person->managing()->paginate();
     }
 }

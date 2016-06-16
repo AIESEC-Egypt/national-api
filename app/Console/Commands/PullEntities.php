@@ -71,6 +71,21 @@ class PullEntities extends Command
         $entity->name = $res->name;
         $entity->full_name = $res->full_name;
         $entity->email = $res->email;
+        if($national) {
+            $entity->level = "mc";
+        } else {
+            $entity->level = "lc";
+        }
+
+        // check for parent
+        if(isset($res->parent) && isset($res->parent->id)) {
+            $parent = Entity::where('id', $res->parent->id)->first();
+            if($parent != null) {
+                $entity->parent_id = $parent->_internal_id;
+            }
+        } else {
+            $entity->parent_id = null;
+        }
 
         // save to database
         $entity->save();

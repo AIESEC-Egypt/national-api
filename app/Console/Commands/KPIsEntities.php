@@ -12,21 +12,21 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Queue;
 
-class KPIsTasks extends Command
+class KPIsEntities extends Command
 {
     /**
      * The name and signature of the console command.
      *
      * @var string
      */
-    protected $signature = 'kpis:tasks';
+    protected $signature = 'kpis:entities';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Dispatch the calculation jobs for tasks related KPIs';
+    protected $description = 'Dispatch the calculation jobs for entity related KPIs';
 
     /**
      * Create a new command instance.
@@ -51,13 +51,12 @@ class KPIsTasks extends Command
             $date = KPIvalueDate::create(['date' => $to]);
         }
         
-        Person::has('tasks')->chunk(200, function($persons) use ($from, $to, $date) {
-            foreach($persons as $person) {
-                // check if there were any activity in the last two weeks, either through an update or an due date, or if there is any due date in the future
-                if($person->tasks()->where('updated_at', '>=', Carbon::yesterday()->subWeeks(2))->orWhere('due', '>=', Carbon::yesterday()->subWeeks(2))->count() > 0) {
-                    Queue::push(new \App\Jobs\KPIsTasks($person, $from, $to, $date));
-                }
+        $mc = Entity::where('id', '=', env('GIS_MC_ID'))->with('childs')->first();
+        if(!is_null($mc)) {
+            Queue::push(new \App\Jobs\KPIsEntities($mc, $from, $to, $date));
+            foreach($mc->childs as $lc) {
+                Queue::push(new \App\Jobs\KPIsEntities($lc, $from, $to, $date));
             }
-        });
+        }
     }
 }

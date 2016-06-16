@@ -12,21 +12,21 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Queue;
 
-class KPIsTasks extends Command
+class KPIsTeams extends Command
 {
     /**
      * The name and signature of the console command.
      *
      * @var string
      */
-    protected $signature = 'kpis:tasks';
+    protected $signature = 'kpis:teams';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Dispatch the calculation jobs for tasks related KPIs';
+    protected $description = 'Dispatch the calculation jobs for team related KPIs';
 
     /**
      * Create a new command instance.
@@ -50,13 +50,14 @@ class KPIsTasks extends Command
         if(is_null($date)) {
             $date = KPIvalueDate::create(['date' => $to]);
         }
-        
-        Person::has('tasks')->chunk(200, function($persons) use ($from, $to, $date) {
-            foreach($persons as $person) {
-                // check if there were any activity in the last two weeks, either through an update or an due date, or if there is any due date in the future
-                if($person->tasks()->where('updated_at', '>=', Carbon::yesterday()->subWeeks(2))->orWhere('due', '>=', Carbon::yesterday()->subWeeks(2))->count() > 0) {
-                    Queue::push(new \App\Jobs\KPIsTasks($person, $from, $to, $date));
-                }
+
+        Term::current()->chunk(10, function($terms) use ($from, $to, $date) {
+            foreach($terms as $term) {
+                $term->teams()->chunk(20, function($teams) use ($from, $to, $date) {
+                    foreach($teams as $team) {
+                        Queue::push(new \App\Jobs\KPIsTeams($team, $from, $to, $date));
+                    }
+                });
             }
         });
     }

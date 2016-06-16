@@ -29,7 +29,11 @@ class Department extends Model
      * @var array
      */
     protected $hidden = ['deleted_at'];
-    
+
+    /**
+     * returns the teams of this department
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
     public function teams() {
         return $this->hasMany('App\Team');
     }
