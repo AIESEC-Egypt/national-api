@@ -53,7 +53,7 @@ class KPIsEntities extends Job
     public function handle()
     {
         // get current term of entity
-        $current_term = $this->_entity->terms()->current()->first();
+        $current_term = $this->_entity->terms()->timeframe($this->_from, $this->_to)->first();
 
         // check if there is a current term
         if(!is_null($current_term)) {
@@ -84,7 +84,7 @@ class KPIsEntities extends Job
             $positionsSubTeamLeader = $current_term->allPositions()->timeframe($this->_from, $this->_to)->leader()->nonTeamLeader()->count();
             $positionsSubTeamLeaderCalc = Carbon::now();
 
-            // get number of matched subteam leader positions
+            // get number of matched subteam leader poitions.sitions
             $positionsSubTeamLeaderMatched = $current_term->allPositions()->timeframe($this->_from, $this->_to)->leader()->nonTeamLeader()->matched()->count();
             $positionsSubTeamLeaderMatchedCalc = Carbon::now();
 
@@ -105,15 +105,15 @@ class KPIsEntities extends Job
             $positionsMemberMatchedCalc = Carbon::now();
 
             // get current number of persons
-            $personsTotal = $current_term->allPositions()->timeframe($this->_from, $this->_to)->whereNotNull('person_id')->count(DB::raw('DISTINCT `positions`.`person_id`'));
+            $personsTotal = $current_term->allPositions()->timeframe($this->_from, $this->_to)->whereNotNull('person_id')->distinct()->count('positions.person_id');
             $personsTotalCalc = Carbon::now();
 
             // get current number of active persons
-            $personsActive = $current_term->allPositions()->timeframe($this->_from, $this->_to)->withActivity($this->_from, $this->_to)->count(DB::raw('DISTINCT `positions`.`person_id`'));
+            $personsActive = $current_term->allPositions()->timeframe($this->_from, $this->_to)->withActivity($this->_from, $this->_to)->distinct()->count('positions.person_id');
             $personsActiveCalc = Carbon::now();
 
             // get current number of active persons which have approved activity
-            $personsActiveApproved = $current_term->allPositions()->timeframe($this->_from, $this->_to)->withApprovedActivity($this->_from, $this->_to)->count(DB::raw('DISTINCT `positions`.`person_id`'));
+            $personsActiveApproved = $current_term->allPositions()->timeframe($this->_from, $this->_to)->withApprovedActivity($this->_from, $this->_to)->distinct()->count('positions.person_id');
             $personsActiveApprovedCalc = Carbon::now();
 
 
@@ -136,7 +136,7 @@ class KPIsEntities extends Job
             $this->singleKPI('positions', 'leader_subteamleader', ($positionsLeader > 0) ? ($positionsSubTeamLeader / $positionsLeader) * 100 : 0, $positionsSubTeamLeaderCalc, 'percentage');
 
             // percentage of how many leader positions are team leaders
-            $this->singleKPI('positions', 'leader_teamleaders', ($positionsLeader > 0) ? ($positionsTeamLeader / $positionsLeader) * 100 : 0, $positionsTeamLeaderCalc, 'percentage');
+            $this->singleKPI('positions', 'leader_teamleader', ($positionsLeader > 0) ? ($positionsTeamLeader / $positionsLeader) * 100 : 0, $positionsTeamLeaderCalc, 'percentage');
 
             // absolute number of matched leader positions (team leader and subteam leader) and in relation to total number of leader positions
             $this->doubleKPI('positions', 'leader_matched', $positionsLeaderMatched, $positionsLeader, $positionsLeaderMatchedCalc);

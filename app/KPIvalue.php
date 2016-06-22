@@ -20,14 +20,21 @@ class KPIvalue extends Model
      *
      * @var array
      */
-    protected $fillable = ['value', 'calculated_at', 'date_id'];
+    protected $fillable = ['value', 'calculated_at', 'date_id', 'kpi_id'];
 
     /**
      * The attributes excluded from the model's JSON form.
      *
      * @var array
      */
-    protected $hidden = [];
+    protected $hidden = ['kpi_id', 'date_id'];
+
+    /**
+     * define always loaded relationships
+     *
+     * @var array
+     */
+    protected $with = ['date'];
 
     /**
      * date attributes
@@ -57,7 +64,7 @@ class KPIvalue extends Model
      * @return \Illuminate\Database\Query\Builder
      */
     public function scopeNewestFirst($query) {
-        return $query->leftJoin('kpi_values_date', 'kpi_value.date_id', '=', 'date.id')->orderBy('date.date', 'desc');
+        return $query->leftJoin('kpi_values_date', 'kpi_values.date_id', '=', 'kpi_values_date.id')->orderBy('kpi_values_date.date', 'desc');
     }
 
     /**

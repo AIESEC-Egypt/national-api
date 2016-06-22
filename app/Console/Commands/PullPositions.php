@@ -51,6 +51,8 @@ class PullPositions extends Command
             foreach($teams as $team) {
                 // get positions from GIS (all by one request, because it's not an paged endpoint. We have to iterate through the result)
                 $positions = $this->_gis->teams[$team->id]->positions->get();
+                // free memory
+                unset($this->_gis->teams[$team->id]);
 
                 // iterate through the result
                 foreach($positions->data as $remote) {
@@ -88,7 +90,13 @@ class PullPositions extends Command
 
                     // save national object
                     $national->save();
+
+                    // free memory
+                    unset($national);
                 }
+
+                // free memory
+                unset($positions);
             }
         });
     }

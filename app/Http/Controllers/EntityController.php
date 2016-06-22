@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Entity;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 
 class EntityController extends Controller
@@ -29,6 +31,23 @@ class EntityController extends Controller
         } else {
             // get entity via GIS id
             return Entity::where('id', $id)->firstOrFail();
+        }
+    }
+
+    public function autocomplete(Request $request) {
+        // check permissions
+        $this->authorize(Auth::user());
+
+        // check parameter
+        if($request->has('q') && strlen($request->input('q')) > 1) {
+            // prepare query
+            $entities = Entity::where('full_name', 'LIKE', '%' . $request->input('q') . '%')->limit(15);
+
+            // return data
+            return ['entities' => $entities->get()];
+        } else {
+            // return no persons if parameter is too short or not set
+            return ['entities' => []];
         }
     }
 

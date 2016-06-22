@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Team;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class TeamController extends Controller
 {
@@ -33,6 +35,31 @@ class TeamController extends Controller
     }
 
     /**
+     * teams autocomplete
+     * 
+     * @GetParam string $q optional
+     *
+     * @param Request $request
+     * @return array
+     */
+    public function autocomplete(Request $request) {
+        // check permissions
+        $this->authorize(Auth::user());
+
+        // check parameter
+        if($request->has('q') && strlen($request->input('q')) > 1) {
+            // prepare query
+            $teams = Team::query()->search($request->input('q'))->with('term', 'term.entity')->limit(15);
+
+            // return data
+            return ['teams' => $teams->get()];
+        } else {
+            // return no persons if parameter is too short or not set
+            return ['teams' => []];
+        }
+    }
+    
+    /**
      * view a Team
      *
      * @param $teamId
@@ -42,14 +69,14 @@ class TeamController extends Controller
         // get team
         $team = $this->getTeam($teamId);
 
-        $team->load('department', '_function', 'term');
+        // check permissions
+        $this->authorize($team);
+
+        $team->load('term', 'term.entity');
 
         if(Gate::allows('kpis', $team)) {
             $team->load('kpis', 'kpis.latestValue');
         }
-
-        // check permissions
-        $this->authorize($team);
 
         // return data
         return ['team' => $team];

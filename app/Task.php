@@ -143,7 +143,7 @@ class Task extends Model
      * @return \Illuminate\Database\Query\Builder
      */
     public function scopeMissedDue($query) {
-        return $query->where('tasks.done_at', '>', 'tasks.due')->orWhere(function($query) {
+        return $query->whereColumn('tasks.done_at', '>', 'tasks.due')->orWhere(function($query) {
             return $query->where('tasks.done', '=', false)->where('tasks.due', '<', DB::raw('NOW()'));
         });
     }

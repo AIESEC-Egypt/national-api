@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 
 class PersonController extends Controller
 {
@@ -38,6 +39,23 @@ class PersonController extends Controller
         }
     }
 
+    public function autocomplete(Request $request) {
+        // check permissions
+        $this->authorize(Auth::user());
+
+        // check parameter
+        if($request->has('q') && strlen($request->input('q')) > 1) {
+            // prepare query
+            $persons = Person::where(DB::raw("CONCAT(`persons`.`first_name`, IFNULL(CONCAT(' ', `persons`.`middle_name`), ''), ' ', `persons`.`last_name`)"), 'LIKE', '%' . $request->input('q') . '%')->limit(15);
+
+            // return data
+            return ['persons' => $persons->get()];
+        } else {
+            // return no persons if parameter is too short or not set
+            return ['persons' => []];
+        }
+    }
+
     /**
      * view a person object
      *
@@ -46,10 +64,22 @@ class PersonController extends Controller
      */
     public function view($personId) {
         // get person
-        $person = $this->getPerson($personId);
+        $person = $this->getPerson($personId)->load('programmes');
 
         // check permissions
         $this->authorize($person);
+
+        $person->load('home_entity');
+
+        // check if we also should load the positions
+        if(Gate::allows('positions', $person)) {
+            $person->load('positions');
+        }
+
+        // check if we also should load the KPIs
+        if(Gate::allows('kpis', $person)) {
+            $person->load('kpis', 'kpis.latestValue');
+        }
 
         // return person
         return ['person' => $person];
@@ -65,19 +95,18 @@ class PersonController extends Controller
      * @return array
      */
     public function listTasks(Request $request, $personId) {
-        // get person
-        $person = $this->getPerson($personId);
+        if($personId instanceof Person) {
+            $person = $personId;
+        } else {
+            // get person
+            $person = $this->getPerson($personId);
+        }
 
         // check permissions
         $this->authorize($person);
 
         // prepare tasks query
         $tasks = $person->tasks()->with('added_by')->where('approved', false)->orderBy('priority');
-
-        // skip_done filter
-        if($request->has('skip_done') && intval($request->input('skip_done')) === 1) {
-            $tasks = $tasks->where('done', false);
-        }
 
         // get and return tasks
         return ['tasks' => $tasks->get()];
@@ -86,10 +115,11 @@ class PersonController extends Controller
     /**
      * adds a tasks to this persons tasks list
      *
-     * @GetParam string $name required
-     * @GetParam time $estimated required
-     * @GetParam int $priority optional
-     * @GetParam date $due optional
+     * @PostParam string $name required
+     * @PostParam time $estimated required
+     * @PostParam int $priority optional
+     * @PostParam date $due optional
+     * @GetParam bool $skip_done optional
      *
      * @param Request $request
      * @param $personId
@@ -128,7 +158,7 @@ class PersonController extends Controller
         $person->tasks()->save($task);
 
         // return all tasks of the person
-        return ['tasks' => $person->tasks()->with('added_by')->where('done', false)->where('approved', false)->orderBy('priority')->get()];
+        return $this->listTasks($request, $person);
     }
 
     /**

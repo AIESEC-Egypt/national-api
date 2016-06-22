@@ -49,6 +49,13 @@ class Person extends Model implements AuthenticatableContract, AuthorizableContr
     protected $dates = ['contacted_at'];
 
     /**
+     * relationships to be loaded by default
+     *
+     * @var array
+     */
+    protected $with = ['programmes', 'managers', 'home_entity'];
+
+    /**
      * returns all tasks of the person
      * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
@@ -109,6 +116,14 @@ class Person extends Model implements AuthenticatableContract, AuthorizableContr
      */
     public function programmes() {
         return $this->belongsToMany('App\Programme', 'persons_programmes');
+    }
+
+    /**
+     * returns the home entity of the person
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function home_entity() {
+        return $this->belongsTo('App\Entity', 'home_entity');
     }
 
     /**

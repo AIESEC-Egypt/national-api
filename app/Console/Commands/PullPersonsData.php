@@ -60,6 +60,9 @@ class PullPersonsData extends Command
 
                 // update person
                 $person->updateFromGIS($res);
+
+                // free memory
+                unset($gis->people[$person->id]);
             }
         });
     }

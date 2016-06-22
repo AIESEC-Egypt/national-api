@@ -2,10 +2,13 @@
 namespace App\Console\Commands;
 
 use App\Entity;
-use App\Person;
+use App\KPIvalue;
+use App\KPIvalueDate;
+use App\Term;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Queue;
 
 class Test extends Command
 {
@@ -38,11 +41,62 @@ class Test extends Command
      */
     public function handle()
     {
-        DB::enableQueryLog();
-        $person = Person::has('positions.parent.person')->get();
-        for($i = 0; $i < 5 && $i < count($person); $i++) {
-            print_r($person[$i]->parentPositionsRecursiveAsFlatCollection(true)->toArray());
-        }
+        //DB::enableQueryLog();
+        $this->calcTeamKPIs(100);
         print_r(DB::getQueryLog());
+    }
+
+    private function seedKPIvalue($id, $count) {
+        $date = Carbon::yesterday()->subWeeks($count);
+        for($i = 0; $i < $count; $i++) {
+            $d = KPIvalueDate::create(['date' => $date]);
+            KPIvalue::create(['value' => rand(0, 100), 'calculated_at' => Carbon::now(), 'date_id' => $d->id, 'kpi_id' => $id]);
+            $date->addWeek();
+        }
+    }
+    
+    private function calcEntityKPIs($count) {
+        $from = Carbon::yesterday()->subWeek($count + 1);
+        $to = Carbon::yesterday()->subWeek($count);
+        
+        for($i = 0; $i < $count; $i++) {
+            $date = KPIvalueDate::where('date', '=', $to)->first();
+            if(is_null($date)) {
+                $date = KPIvalueDate::create(['date' => $to]);
+            }
+
+            $mc = Entity::where('id', '=', env('GIS_MC_ID'))->with('childs')->first();
+            if(!is_null($mc)) {
+                Queue::push(new \App\Jobs\KPIsEntities($mc, $from, $to, $date));
+                foreach($mc->childs as $lc) {
+                    Queue::push(new \App\Jobs\KPIsEntities($lc, $from, $to, $date));
+                }
+            }
+            $from->addWeek();
+            $to->addWeek();
+        }
+    }
+
+    private function calcTeamKPIs($count) {
+        $from = Carbon::yesterday()->subWeek($count + 1);
+        $to = Carbon::yesterday()->subWeek($count);
+
+        for($i = 0; $i < $count; $i++) {
+            $date = KPIvalueDate::where('date', '=', $to)->first();
+            if (is_null($date)) {
+                $date = KPIvalueDate::create(['date' => $to]);
+            }
+            Term::timeframe($from, $to)->chunk(10, function ($terms) use ($from, $to, $date) {
+                foreach ($terms as $term) {
+                    $term->teams()->chunk(20, function ($teams) use ($from, $to, $date) {
+                        foreach ($teams as $team) {
+                            Queue::push(new \App\Jobs\KPIsTeams($team, $from, $to, $date));
+                        }
+                    });
+                }
+            });
+            $from->addWeek();
+            $to->addWeek();
+        }
     }
 }

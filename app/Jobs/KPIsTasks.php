@@ -57,17 +57,17 @@ class KPIsTasks extends Job
         // total tasks which were due during the period
         $total = $this->_person->tasks()->withDue($this->_from, $this->_to)->count();
         $totalCalc = Carbon::now();
-        
+
         // number of missed due dates during this period
         $missed = $this->_person->tasks()->withDue($this->_from, $this->_to)->missedDue()->count();
         $missedCalc = Carbon::now();
 
         // get time of tasks which were marked done during the period
-        $done = $this->_person->tasks()->done($this->_from, $this->_to)->select([DB::raw('SUM(`estimated`) as estimated'), DB::raw('SUM(`needed`) as needed')])->groupBy('person_id');
+        $done = $this->_person->tasks()->done($this->_from, $this->_to)->select([DB::raw('SUM(`estimated`) as estimated'), DB::raw('SUM(`needed`) as needed')])->groupBy('person_id')->first();
         $doneCalc = Carbon::now();
         
         // get time of tasks which were marked done and approved during the period
-        $approved = $this->_person->tasks()->done($this->_from, $this->_to)->approved($this->_from, $this->_to)->select([DB::raw('SUM(`estimated`) as estimated'), DB::raw('SUM(`needed`) as needed')])->groupBy('person_id');
+        $approved = $this->_person->tasks()->done($this->_from, $this->_to)->approved($this->_from, $this->_to)->select([DB::raw('SUM(`estimated`) as estimated'), DB::raw('SUM(`needed`) as needed')])->groupBy('person_id')->first();
         $approvedCalc = Carbon::now();
 
         /*

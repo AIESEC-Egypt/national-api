@@ -54,16 +54,32 @@ class KPI extends Model
     }
     
     /**
-     * returns the relation to the latest value (for performance reasons use this only on collections)
+     * returns the relation to the latest value
      */
     public function latestValue() {
-        return $this->hasMany('App\KPIvalue', 'kpi_id')->latest();
+        return $this->hasOne('App\KPIvalue', 'kpi_id')->latest();
     }
+    
+    public function scopeMeasurable($query, $measurable_type, $measurable_id) {
+        if(substr($measurable_id, 0, 1) == '_') {
+            return $query->where('measurable_type', '=', $measurable_type)->where('measurable_id', '=', substr($measurable_id, 1));
+        } else {
+            switch($measurable_type) {
+                case 'Entity':
+                    $whereTable = 'entities';
+                    break;
 
-    /**
-     * return the query to select the newest
-     */
-    public function singleLatestValue() {
+                case 'Person':
+                    $whereTable = 'persons';
+                    break;
 
+                case 'Team':
+                    $whereTable = 'teams';
+                    break;
+            }
+            return $query->where('measurable_type', '=', $measurable_type)->whereIn('measurable_id', function($query) use ($whereTable, $measurable_id) {
+                return $query->select('_internal_id')->from($whereTable)->where('id', '=', $measurable_id);
+            });
+        }
     }
 }

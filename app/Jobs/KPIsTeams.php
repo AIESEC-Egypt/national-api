@@ -61,16 +61,20 @@ class KPIsTeams extends Job
         $totalPositionsCalc = Carbon::now();
 
         // get number of currently matched positions in the team (this data is not totally accurate, because we don't know when the person was matched)
-        $matchedPositions = $this->_team->allPositions()->timeframe($this->_from, $this->_to)->whereNotNull('person_id')->count();
+        $matchedPositions = $this->_team->allPositions()->timeframe($this->_from, $this->_to)->matched()->count();
         $matchedPositionsCalc = Carbon::now();
 
+        // get number of currently matched positions in the team (this data is not totally accurate, because we don't know when the person was matched)
+        $personsTotal = $this->_team->allPositions()->timeframe($this->_from, $this->_to)->matched()->count(DB::raw('DISTINCT `positions`.`person_id`'));
+        $personsTotalCalc = Carbon::now();
+
         // get number of positions which finished tasks in the timeframe
-        $positionsWithActivity = $this->_team->allPositions()->timeframe($this->_from, $this->_to)->withActivity($this->_from, $this->_to)->count();
-        $positionsWithActivityCalc = Carbon::now();
+        $personsWithActivity = $this->_team->allPositions()->timeframe($this->_from, $this->_to)->withActivity($this->_from, $this->_to)->count(DB::raw('DISTINCT `positions`.`person_id`'));
+        $personsWithActivityCalc = Carbon::now();
 
         // get number of positions which finished tasks in the timeframe which were approved during the timeframe
-        $positionsWithApprovedActivity = $this->_team->allPositions()->timeframe($this->_from, $this->_to)->withApprovedActivity($this->_from, $this->_to)->count();
-        $positionsWithApprovedActivityCalc = Carbon::now();
+        $personsWithApprovedActivity = $this->_team->allPositions()->timeframe($this->_from, $this->_to)->withApprovedActivity($this->_from, $this->_to)->count(DB::raw('DISTINCT `positions`.`person_id`'));
+        $personsWithApprovedActivityCalc = Carbon::now();
 
         /*
          * calculate KPIs and save values
@@ -81,11 +85,14 @@ class KPIsTeams extends Job
         // absolute number of matched Positions and in relation to total number of Positions
         $this->doubleKPI('positions', 'matched', $matchedPositions, $totalPositions, $matchedPositionsCalc);
 
-        // absolute number of positions which members finished tasks in this period and in relations to total number of positions
-        $this->doubleKPI('positions', 'active', $positionsWithActivity, $totalPositions, $positionsWithActivityCalc);
+        // absolute number of distinct persons matched to positions in this team
+        $this->singleKPI('persons', 'total', $personsTotal, $personsTotalCalc);
 
-        // absolute number of positions which members finished tasks in this period which were also approved in this period and in relation to total number of positions
-        $this->doubleKPI('positions', 'active_approved', $positionsWithApprovedActivity, $totalPositions, $positionsWithApprovedActivityCalc);
+        // absolute number of persons with finished tasks in this period and in relations to total number of persons
+        $this->doubleKPI('persons', 'active', $personsWithActivity, $personsTotal, $personsWithActivityCalc);
+
+        // absolute number of persons with finished tasks in this period which were also approved in this period and in relation to total number of persons
+        $this->doubleKPI('persons', 'active_approved', $personsWithApprovedActivity, $personsTotal, $personsWithApprovedActivityCalc);
     }
 
     private function singleKPI($type, $subtype, $value, $calc, $unit = 'number') {

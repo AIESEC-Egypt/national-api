@@ -3,6 +3,7 @@ namespace App\Policies;
 
 use App\KPI;
 use App\Person;
+use Illuminate\Database\Eloquent\Model;
 
 class KPIPolicy {
     /**
@@ -14,13 +15,13 @@ class KPIPolicy {
      */
     public function view(Person $user, KPI $kpi) {
         switch($kpi->measurable_type) {
-            case 'App\Person':
+            case 'Person':
                 return PersonPolicy::kpis($user, $kpi->measurable);
             
-            case 'App\Entity':
+            case 'Entity':
                 return EntityPolicy::kpis($user, $kpi->measurable);
 
-            case 'App\Team':
+            case 'Team':
                 return TeamPolicy::kpis($user, $kpi->measurable);
         }
         return false;

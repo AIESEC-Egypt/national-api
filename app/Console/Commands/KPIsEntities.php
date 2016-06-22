@@ -43,8 +43,8 @@ class KPIsEntities extends Command
      */
     public function handle()
     {
-        $from = Carbon::yesterday()->subWeek();
-        $to = Carbon::yesterday();
+        $from = Carbon::today()->subWeek();
+        $to = Carbon::today();
 
         $date = KPIvalueDate::where('date', '=', $to)->first();
         if(is_null($date)) {

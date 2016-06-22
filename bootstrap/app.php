@@ -79,6 +79,12 @@ $app->middleware([
 $app->register(App\Providers\AuthServiceProvider::class);
 $app->register(Illuminate\Redis\RedisServiceProvider::class);
 $app->register(GISwrapper\Providers\Lumen::class);
+
+\Illuminate\Database\Eloquent\Relations\Relation::morphMap([
+    'Entity' => App\Entity::class,
+    'Person' => App\Person::class,
+    'Team' => App\Team::class
+]);
 /*
 |--------------------------------------------------------------------------
 | Load The Application Routes

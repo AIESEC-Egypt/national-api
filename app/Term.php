@@ -78,7 +78,7 @@ class Term extends Model
      * @return \Illuminate\Database\Query\Builder
      */
     public function persons($from = null, $to = null) {
-        $query = Person::query()->select('persons.*')->distinct()->from('teams')
+        $query = Person::query()->distinct()->select('persons.*')->distinct()->from('teams')
             ->where('teams.term_id', '=', $this->original['_internal_id'])->whereNull('teams.deleted_at')
             ->leftJoin('positions', 'positions.team_id', '=', 'teams._internal_id')
             ->whereNull('positions.deleted_at')
@@ -102,5 +102,17 @@ class Term extends Model
      */
     public function scopeCurrent($query) {
         return $query->where('terms.start_date', '<=', DB::raw('NOW()'))->where('terms.end_date', '>=', DB::raw('NOW()'));
+    }
+
+    /**
+     * scopes the query to return only terms from the specified timeframe
+     *
+     * @param $query
+     * @param Carbon $from
+     * @param Carbon $to
+     * @return mixed
+     */
+    public function scopeTimeframe($query, $from, $to) {
+        return $query->where('terms.start_date', '<=', $from)->where('terms.end_date', '>=', $to);
     }
 }

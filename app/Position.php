@@ -112,14 +112,9 @@ class Position extends Model
      * @return \Illuminate\Database\Query\Builder
      */
     public function scopeTeamType($query, $team_type) {
-        if(is_array($query->getQuery()->joins)) {
-            foreach ($query->getQuery()->joins as $join) {
-                if($join->table == 'teams') {
-                    return $query->where('teams.team_type', '=', $team_type);
-                }
-            }
-        }
-        return $query->leftJoin('teams', 'positions.team_id', '=', 'teams._internal_id')->whereNull('teams.deleted_at')->where('teams.team_type', '=', $team_type)->select('positions.*');
+        return $query->whereIn('positions.team_id', function($query) use ($team_type) {
+            $query->select('_internal_id')->from('teams')->whereNull('teams.deleted_at')->where('teams.team_type', '=', $team_type);
+        });
     }
 
     /**
@@ -127,7 +122,9 @@ class Position extends Model
      * @return \Illuminate\Database\Query\Builder
      */
     public function scopeNonLeader($query) {
-        return $query->leftJoin('positions as subpos', 'subpos.parent_id', '=', 'positions._internal_id')->whereNull('subpos._internal_id')->whereNull('subpos.deleted_at')->whereNotNull('positions.parent_id')->select('positions.*');
+        return $query->whereNotIn('positions._internal_id', function($query) {
+            return $query->select('parent_id')->from('positions')->whereNull('deleted_at')->whereNotNull('parent_id');
+        })->whereNotNull('positions.parent_id');
     }
 
     /**
@@ -135,11 +132,13 @@ class Position extends Model
      * @return \Illuminate\Database\Query\Builder
      */
     public function scopeLeader($query) {
-        return $query->leftJoin('positions as subpos', 'subpos.parent_id', '=', 'positions._internal_id')->whereNull('subpos.deleted_at')->whereNotNull('subpos._internal_id')->distinct()->select('positions.*');
+        return $query->whereIn('positions._internal_id', function($query) {
+            return $query->select('parent_id')->from('positions')->whereNull('deleted_at')->whereNotNull('parent_id');
+        });
     }
 
     /**
-     * scope query to non team leader positions, so only sub team leaders (works only with Leader scope)
+     * scope query to non team leader positions (only sub team leaders when used with scopeLeader)
      * @return \Illuminate\Database\Query\Builder
      */
     public function scopeNonTeamLeader($query) {
@@ -147,7 +146,7 @@ class Position extends Model
     }
 
     /**
-     * scope query to non sub team leader positions, so only team leaders (works only with Leader scope)
+     * scope query to only top positions in a team (should be renamed to scopeTeamLeader)
      * @return \Illuminate\Database\Query\Builder
      */
     public function scopeNonSubTeamLeader($query) {
@@ -159,21 +158,7 @@ class Position extends Model
      * @return \Illuminate\Database\Query\Builder
      */
     public function scopeCurrent($query) {
-        $query = $query->where('positions.start_date', '<=', Carbon::now())->where('positions.end_date', '>=', Carbon::now());
-        if(is_array($query->getQuery()->joins)) {
-            foreach ($query->getQuery()->joins as $join) {
-                switch ($join->table) {
-                    case 'positions as childs':
-                        $query = $query->where('childs.start_date', '<=', Carbon::now())->where('childs.end_date', '>=', Carbon::now());
-                        break;
-
-                    case 'positions as parents':
-                        $query = $query->where('parents.start_date', '<=', Carbon::now())->where('parents.end_date', '>=', Carbon::now());
-                        break;
-                }
-            }
-        }
-        return $query;
+        return $query->where('positions.start_date', '<=', DB::raw('NOW()'))->where('positions.end_date', '>=', DB::raw('NOW()'));
     }
 
     /**
@@ -207,11 +192,9 @@ class Position extends Model
      * @return \Illuminate\Database\Query\Builder
      */
     public function scopeWithActivity($query, $from, $to) {
-        return $query->leftJoin(DB::raw('(select `person_id`, COUNT(*) as count from `tasks` where `done_at` >= ? and `done_at` <= ? and `tasks`.`deleted_at` is null group by `person_id`) tasks_count'), 'positions.person_id', '=', 'tasks_count.person_id')
-            ->addBinding($from, 'join')
-            ->addBinding($to, 'join')
-            ->whereNotNull('positions.person_id')
-            ->where('tasks_count.count', '>', 0);
+        return $query->whereIn('positions.person_id', function($query) use ($from, $to) {
+            return $query->select('person_id')->from('tasks')->where('done_at', '>=', $from)->where('done_at', '<=', $to)->whereNull('deleted_at')->groupBy('person_id')->having(DB::raw('COUNT(*)'), '>', 0);
+        });
     }
 
     /**
@@ -223,11 +206,9 @@ class Position extends Model
      * @return \Illuminate\Database\Query\Builder
      */
     public function scopeWithoutActivity($query, $from, $to) {
-        return $query->leftJoin(DB::raw('(select `person_id`, COUNT(*) as count from `tasks` where `done_at` >= ? and `done_at` <= ? and `tasks`.`deleted_at` is null group by `person_id`) tasks_count'), 'positions.person_id', '=', 'tasks_count.person_id')
-            ->addBinding($from, 'join')
-            ->addBinding($to, 'join')
-            ->whereNotNull('positions.person_id')
-            ->where('tasks_count.count', '=', 0);
+        return $query->whereNotIn('positions.person_id', function($query) use ($from, $to) {
+            return $query->select('person_id')->from('tasks')->where('done_at', '>=', $from)->where('done_at', '<=', $to)->whereNull('deleted_at')->groupBy('person_id')->having(DB::raw('COUNT(*)'), '>', 0);
+        });
     }
 
     /**
@@ -239,13 +220,9 @@ class Position extends Model
      * @return \Illuminate\Database\Query\Builder
      */
     public function scopeWithApprovedActivity($query, $from, $to) {
-        return $query->leftJoin(DB::raw('(select `person_id`, COUNT(*) as count from `tasks` where `done_at` >= ? and `done_at` <= ? and `approved_at` >= ? and `approved_at` <= ? and `tasks`.`deleted_at` is null group by `person_id`) tasks_approved_count'), 'positions.person_id', '=', 'tasks_approved_count.person_id')
-            ->addBinding($from, 'join')
-            ->addBinding($to, 'join')
-            ->addBinding($from, 'join')
-            ->addBinding($to, 'join')
-            ->whereNotNull('positions.person_id')
-            ->where('tasks_approved_count.count', '>', 0);
+        return $query->whereIn('positions.person_id', function($query) use ($from, $to) {
+            return $query->select('person_id')->from('tasks')->where('done_at', '>=', $from)->where('done_at', '<=', $to)->where('approved_at', '>=', $from)->where('approved_at', '<=', $to)->whereNull('deleted_at')->groupBy('person_id')->having(DB::raw('COUNT(*)'), '>', 0);
+        });
     }
 
     /**
@@ -257,12 +234,8 @@ class Position extends Model
      * @return \Illuminate\Database\Query\Builder
      */
     public function scopeWithoutApprovedActivity($query, $from, $to) {
-        return $query->leftJoin(DB::raw('(select `person_id`, COUNT(*) as count from `tasks` where `done_at` >= ? and `done_at` <= ? and `approved_at` >= ? and `approved_at` <= ? and `tasks`.`deleted_at` is null group by `person_id`) tasks_approved_count'), 'positions.person_id', '=', 'tasks_approved_count.person_id')
-            ->addBinding($from, 'join')
-            ->addBinding($to, 'join')
-            ->addBinding($from, 'join')
-            ->addBinding($to, 'join')
-            ->whereNotNull('positions.person_id')
-            ->where('tasks_approved_count.count', '=', 0);
+        return $query->whereNotIn('positions.person_id', function($query) use ($from, $to) {
+            return $query->select('person_id')->from('tasks')->where('done_at', '>=', $from)->where('done_at', '<=', $to)->where('approved_at', '>=', $from)->where('approved_at', '<=', $to)->whereNull('deleted_at')->groupBy('person_id')->having(DB::raw('COUNT(*)'), '>', 0);
+        });
     }
 }

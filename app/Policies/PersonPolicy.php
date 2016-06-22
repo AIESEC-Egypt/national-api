@@ -11,6 +11,20 @@ use App\Person;
 
 class PersonPolicy {
     /**
+     * Determines if $user can use the persons autocomplete endpoint
+     *
+     * @param Person $user
+     * @return bool
+     */
+    public function autocomplete(Person $user) {
+        if($user->positions()->current()->count() > 0) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    /**
      * Determine if $user is allowed to view $person
      *
      * @param Person $user

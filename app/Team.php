@@ -5,6 +5,7 @@ namespace App;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 class Team extends Model
 {
@@ -39,6 +40,13 @@ class Team extends Model
     protected $hidden = ['deleted_at', '_internal_id', 'term_id', 'department_id', 'function_id'];
 
     /**
+     * relationships to be loaded by default
+     * 
+     * @var array
+     */
+    protected $with = ['department', '_function'];
+    
+    /**
      * returns the department the team belongs to
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
@@ -59,7 +67,9 @@ class Team extends Model
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function entity() {
-        return Entity::query()->leftJoin('terms', 'terms.entity_id', '=', 'entities._internal_id')->whereNull('terms.deleted_at')->where('terms._internal_id', '=', $this->attributes['term_id']);
+        return Entity::query()->whereIn('_internal_id', function($query) {
+            return $query->select('entity_id')->from('terms')->where('_internal_id', '=', $this->attributes['term_id']);
+        });
     }
 
     /**
@@ -109,7 +119,9 @@ class Team extends Model
      * @return \Illuminate\Database\Query\Builder
      */
     public function scopeCurrent($query) {
-        return $query->leftJoin('terms', 'terms._internal_id', '=', 'teams.term_id')->where('terms.start_date', '<=', Carbon::now())->where('terms.end_date', '>=', Carbon::now());
+        return $query->whereIn('teams.term_id', function($query) {
+            return $query->select('_internal_id')->from('terms')->where('start_date', '<=', DB::raw('NOW()'))->where('end_date', '>=', DB::raw('NOW()'))->whereNull('deleted_at');
+        });
     }
 
     /**
@@ -121,6 +133,20 @@ class Team extends Model
      */
     public function scopeType($query, $team_type) {
         return $query->where('teams.team_type', '=', $team_type);
+    }
+
+    /**
+     * scopes to query to search for $q
+     * 
+     * @param $query
+     * @param $q
+     * @return \Illuminate\Database\Query\Builder
+     */
+    public function scopeSearch($query, $q) {
+        return $query->select('teams.*')
+            ->leftJoin('terms', 'terms._internal_id', '=', 'teams.term_id')->whereNull('terms.deleted_at')
+            ->leftJoin('entities', 'entities._internal_id', '=', 'terms.entity_id')->whereNull('entities.deleted_at')
+            ->where(DB::raw("CONCAT(IFNULL(`teams`.`title`, ''), ' ', IFNULL(`terms`.`short_name`, ''), ' ', IFNULL(`entities`.`name`, ''))"), 'LIKE', '%' . $q . '%');
     }
 
     /**

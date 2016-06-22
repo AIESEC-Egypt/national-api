@@ -13,6 +13,9 @@
 /*
  * Person routes (v1)
  */
+// GET /v1/persons/autocomplete.json
+$app->get('v1/persons/autocomplete.json', ['as' => 'persons_autocomplete', 'uses' => 'PersonController@autocomplete']);
+
 // GET /v1/persons/{person_id}.json
 $app->get('v1/persons/{person_id}.json', ['as' => 'get_person', 'uses' => 'PersonController@view']);
 
@@ -36,21 +39,17 @@ $app->group(['prefix' => 'v1/persons/{person_id}', 'namespace' => 'App\Http\Cont
 /*
  * Tasks routes (v1)
  */
-// GET /v1/tasks.json
-$app->get('v1/tasks.json', ['as' => 'list_tasks', 'uses' => 'TaskController@all']);
+// POST /v1/tasks/prioritize.json
+$app->post('v1/tasks/prioritize.json', ['as' => 'prioritize_tasks', 'uses' => 'TaskController@prioritize']);
 
 // GET /v1/tasks/{task_id}.json
 $app->get('v1/tasks/{task_id}.json', ['as' => 'get_task', 'uses' => 'TaskController@view']);
 
-// UPDATE /v1/tasks/{task_id}.json
-$app->delete('v1/tasks/{task_id}.json', ['as' => 'update_task', 'uses' => 'TaskController@update']);
+// POST /v1/tasks/{task_id}.json
+$app->post('v1/tasks/{task_id}.json', ['as' => 'update_task', 'uses' => 'TaskController@update']);
 
 // DELETE /v1/tasks/{task_id}.json
 $app->delete('v1/tasks/{task_id}.json', ['as' => 'delete_task', 'uses' => 'TaskController@delete']);
-
-// PUT /v1/tasks/prioritize.json
-$app->post('v1/tasks/prioritize.json', ['as' => 'prioritize_tasks', 'uses' => 'TaskController@prioritize']);
-
 
 $app->group(['prefix' => 'v1/tasks/{task_id}', 'namespace' => 'App\Http\Controllers'], function () use ($app) {
     // POST /v1/tasks/{task_id}/done.json
@@ -65,6 +64,12 @@ $app->group(['prefix' => 'v1/tasks/{task_id}', 'namespace' => 'App\Http\Controll
  */
 $app->group(['prefix' => 'v1/kpis', 'namespace' => 'App\Http\Controllers'], function () use ($app) {
 
+    // GET /v1/kpis/bySubtypeAndMeasurable/{kpi_type}/{kpi_subtype}/{measurable_type}/{measurable_id}.json
+    $app->get('bySubtypeAndMeasurable/{kpi_type}/{kpi_subtype}/{measurable_type}/{measurable_id}.json', ['as' => 'get_kpi_by_subtype_and_measurable', 'uses' => 'KPIController@bySubtypeAndMeasurable']);
+
+    // GET /v1/kpis/aggregate/{kpi_type}/{kpi_subtype}/{measurable_type}/{aggregate_by}/{aggregate_function}.json
+    $app->get('aggregate/{kpi_type}/{kpi_subtype}/{measurable_type}/{aggregate_by}/{aggregate_function}.json', ['as' => 'kpi_aggregate', 'uses' => 'KPIController@aggregate']);
+
     // GET /v1/kpis/{kpi_id}.json
     $app->get('{kpi_id}.json', ['as' => 'get_kpi', 'uses' => 'KPIController@view']);
 
@@ -75,6 +80,9 @@ $app->group(['prefix' => 'v1/kpis', 'namespace' => 'App\Http\Controllers'], func
 /*
  * Entity routes (v1)
  */
+// GET /v1/entities/autocomplete.json
+$app->get('v1/entities/autocomplete.json', ['as' => 'entities_autocomplete', 'uses' => 'EntityController@autocomplete']);
+
 // GET /v1/entities/{entity_id}.json
 $app->get('v1/entities/{entity_id}.json', ['as' => 'get_entity', 'uses' => 'EntityController@view']);
 
@@ -91,6 +99,9 @@ $app->get('v1/positions/{position_id}.json', ['as' => 'get_position', 'uses' => 
 /*
  * Team routes (v1)
  */
+// GET /v1/teams/autocomplete.json
+$app->get('v1/teams/autocomplete.json', ['as' => 'teams_autocomplete', 'uses' => 'TeamController@autocomplete']);
+
 // GET /v1/teams/{team_id}.json
 $app->get('v1/teams/{team_id}.json', ['as' => 'get_team', 'uses' => 'TeamController@view']);
 
