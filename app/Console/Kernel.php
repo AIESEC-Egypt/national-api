@@ -34,5 +34,7 @@ class Kernel extends ConsoleKernel
     {
         $schedule->command('kpis:tasks')->sundays()->daily();
         $schedule->command('kpis:teams')->sundays()->daily();
+        $schedule->command('kpis:entities')->sundays()->daily();
+
     }
 }
