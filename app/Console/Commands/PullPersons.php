@@ -15,7 +15,7 @@ class PullPersons extends Command
      *
      * @var string
      */
-    protected $signature = 'sync:pull:persons';
+    protected $signature = 'sync:pull:persons {per_page?} {registered_from?}';
 
     /**
      * The console command description.
@@ -36,22 +36,18 @@ class PullPersons extends Command
 
     /**
      * Execute the console command.
-     *
-     * @param int $perPage
-     * @param string|null $registeredFrom
-     * @return mixed
      */
-    public function handle($perPage = 200, $registeredFrom = null)
+    public function handle()
     {
         // get a GIS Wrapper instance
         $gis = App::make('GIS')->getInstance();
-        
-        // increase number of people per page
-        $gis->people->setPerPage($perPage);
 
-        // set registered_from filter if isset
-        if($registeredFrom !== null) {
-            $gis->people->filters->registered->from = new \DateTime($registeredFrom);
+        // proceed per_page argument
+        if($this->argument('per_page') !== null) $gis->people->setPerPage($this->argument('per_page'));
+
+        // proceed registered_from argument
+        if($this->argument('registered_from') !== null) {
+            $gis->people->filters->registered->from = new \DateTime($this->argument('registered_from'));
         }
 
         // iterate through all persons visible to the GIS user

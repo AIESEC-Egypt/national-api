@@ -11,6 +11,7 @@ namespace App\Console\Commands;
 
 use App\Person;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\DB;
 
 class PullPersonsData extends Command
@@ -20,7 +21,7 @@ class PullPersonsData extends Command
      *
      * @var string
      */
-    protected $signature = 'sync:pull:personsData';
+    protected $signature = 'sync:pull:personsData {worker_id?} {workers_total?}';
 
     /**
      * The console command description.
@@ -39,17 +40,17 @@ class PullPersonsData extends Command
 
     /**
      * Execute the console command.
-     * @param int $id worker id
-     * @param int $total number of workers
      */
-    public function handle(integer $id = null, integer $total = null)
+    public function handle()
     {
         // prepare arguments
+        $id = $this->argument('worker_id');
+        $total = $this->argument('workers_total');
         if(is_null($id)) $id = 0;
         if(is_null($total)) $total = 1;
         
         // get GIS instance
-        $gis = App::make('gis')->getInstance();
+        $gis = App::make('GIS')->getInstance();
 
         // get the persons of this worker in chunks
         Person::where(DB::raw('MOD(`id`, ' . intval($total) . ')'), '=', $id)->chunk(50, function($persons) use ($gis) {

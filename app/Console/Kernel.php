@@ -2,6 +2,7 @@
 
 namespace App\Console;
 
+use Carbon\Carbon;
 use Illuminate\Console\Scheduling\Schedule;
 use Laravel\Lumen\Console\Kernel as ConsoleKernel;
 
@@ -20,8 +21,7 @@ class Kernel extends ConsoleKernel
         'App\Console\Commands\PullPositions',
         'App\Console\Commands\KPIsTasks',
         'App\Console\Commands\KPIsTeams',
-        'App\Console\Commands\KPIsEntities',
-        'App\Console\Commands\Test'
+        'App\Console\Commands\KPIsEntities'
     ];
 
     /**
@@ -32,9 +32,25 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        $schedule->command('kpis:tasks')->sundays()->daily();
-        $schedule->command('kpis:teams')->sundays()->daily();
-        $schedule->command('kpis:entities')->sundays()->daily();
+        // KPIs
+        $schedule->command('kpis:tasks')->weekly()->sundays();
+        $schedule->command('kpis:teams')->weekly()->sundays();
+        $schedule->command('kpis:entities')->weekly()->sundays();
 
+        // persons pull
+        $schedule->command('sync:pull:persons')->daily();
+        $schedule->command('sync:pull:persons 50 \'' . Carbon::now()->subMinutes(5)->toDateTimeString() . '\'')->everyFiveMinutes();
+        for($i = 0; $i < env('PULL_PERSONSDATA_WORKERS'); $i++) {
+            $schedule->command('sync:pull:personsData ' . $i . ' ' . env('PULL_PERSONSDATA_WORKERS'))->everyMinute()->withoutOverlapping();
+        }
+
+        // pull programmes
+        $schedule->command('sync:pull:programmes')->daily();
+
+        // pull entities
+        $schedule->command('sync:pull:entities')->everyTenMinutes();
+
+        // pull positions
+        $schedule->command('sync:pull:positions')->everyTenMinutes();
     }
 }

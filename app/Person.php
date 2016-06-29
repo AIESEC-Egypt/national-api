@@ -123,7 +123,7 @@ class Person extends Model implements AuthenticatableContract, AuthorizableContr
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function home_entity() {
-        return $this->belongsTo('App\Entity', 'home_entity');
+        return $this->belongsTo('App\Entity', 'homeEntity');
     }
 
     /**
@@ -402,7 +402,7 @@ class Person extends Model implements AuthenticatableContract, AuthorizableContr
         $scalarFields = ['email', 'first_name', 'middle_name', 'last_name', 'dob', 'home_entity', 'profile_picture_url', 'interviewed', 'is_employee', 'status', 'phone', 'location', 'nps_score', 'contacted_at', 'contacted_by', 'cv_url'];
         foreach($scalarFields as $field) {
             if(isset($remote->$field) && $remote->$field != $this->$field) {
-                $this->$field = $remote->$field;
+                $this->attributes[$field] = $remote->$field;
             }
         }
 
