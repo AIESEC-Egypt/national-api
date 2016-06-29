@@ -35,7 +35,6 @@ class PullEntities extends Command
     public function __construct()
     {
         parent::__construct();
-        $this->_gis = App::make('GIS')->getInstance();
     }
 
     /**
@@ -45,6 +44,9 @@ class PullEntities extends Command
      */
     public function handle()
     {
+        // get GIS instance
+        $this->_gis = App::make('GIS')->getInstance();
+
         // get MC office from the GIS
         $res = $this->_gis->committees[env('GIS_MC_ID')]->get();
 

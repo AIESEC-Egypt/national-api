@@ -36,7 +36,6 @@ class PullPositions extends Command
     public function __construct()
     {
         parent::__construct();
-        $this->_gis = App::make('GIS')->getInstance();
     }
 
     /**
@@ -46,6 +45,9 @@ class PullPositions extends Command
      */
     public function handle()
     {
+        // get GIS instance
+        $this->_gis = App::make('GIS')->getInstance();
+
         // iterate through all teams in chunks of 50 teams
         Team::chunk(50, function ($teams) {
             foreach($teams as $team) {
